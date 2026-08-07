@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable;
+
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'role',
+        'phone',
+        'avatar',
+        'gender',
+        'birth_date',
+        'address',
+        'pending_children_info',
+        'is_active',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_active' => 'boolean',
+            'birth_date' => 'date',
+            'pending_children_info' => 'array',
+        ];
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isServant(): bool
+    {
+        return $this->role === 'servant';
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->role === 'student';
+    }
+
+    public function isParent(): bool
+    {
+        return $this->role === 'parent';
+    }
+
+    public function studentProfile()
+    {
+        return $this->hasOne(StudentProfile::class, 'user_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(StudentProfile::class, 'parent_id');
+    }
+
+    public function assignedClasses()
+    {
+        return $this->belongsToMany(SchoolClass::class, 'class_servant', 'servant_id', 'class_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'user_id');
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        if ($this->avatar && file_exists(public_path('storage/' . $this->avatar))) {
+            return asset('storage/' . $this->avatar);
+        }
+        $name = urlencode($this->name);
+        return "https://ui-avatars.com/api/?name={$name}&background=0f172a&color=f59e0b&bold=true";
+    }
+}
