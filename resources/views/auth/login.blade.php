@@ -6,10 +6,10 @@
     <div style="width: 100%; max-width: 480px;">
         <div class="card" style="padding: 40px; border-radius: var(--radius-lg); box-shadow: 0 20px 40px rgba(0,0,0,0.3);">
             <div style="text-align: center; margin-bottom: 30px;">
-                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; color: white; margin-bottom: 16px; box-shadow: 0 8px 20px rgba(217,119,6,0.3);">
-                    <i class="fas fa-bible"></i>
+                <div style="width: 115px; height: 115px; background: white; border-radius: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 8px; margin-bottom: 16px; box-shadow: 0 12px 30px rgba(0,0,0,0.18);">
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
-                <h1 style="font-size: 24px; font-weight: 800; color: var(--primary-dark);">مدرسة الكتاب المقدس</h1>
+                <h1 style="font-size: 22px; font-weight: 800; color: var(--primary-dark);">مدرسة القديس تيموثاوس للكتاب المقدس</h1>
                 <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">سجّل دخولك للوصول إلى المنصة التعليمية</p>
             </div>
 

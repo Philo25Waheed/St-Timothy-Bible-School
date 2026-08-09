@@ -1,16 +1,16 @@
 @extends('layouts.public')
-@section('title', 'مدرسة الكتاب المقدس - المنصة التعليمية الرقمية')
+@section('title', "مدرسة القديس تيموثاوس للكتاب المقدس")
 
 @section('content')
 <!-- Header Navbar -->
 <header style="background: var(--primary-dark); color: white; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
-    <div style="display: flex; align-items: center; gap: 14px;">
-        <div style="width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: white;">
-            <i class="fas fa-bible"></i>
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 64px; height: 64px; background: #ffffff; border-radius: 14px; display: flex; align-items: center; justify-content: center; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+            <img src="{{ asset('images/logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 10px;">
         </div>
         <div>
-            <div style="font-size: 20px; font-weight: 800; color: white;">مدرسة الكتاب المقدس</div>
-            <div style="font-size: 11px; color: var(--accent-gold);">منصة التعليم والتربية الكنسية المبتكرة</div>
+            <div style="font-size: 22px; font-weight: 800; color: white;">مدرسة القديس تيموثاوس للكتاب المقدس</div>
+            <div style="font-size: 12px; color: var(--accent-gold);">كنيسة السيدة العذراء و الانبا رويس - حدائق الأهرام</div>
         </div>
     </div>
 
@@ -25,16 +25,22 @@
 </header>
 
 <!-- Hero Section -->
-<section style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 100px 40px 120px; text-align: center; position: relative; overflow: hidden;">
+<section style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 80px 40px 100px; text-align: center; position: relative; overflow: hidden;">
     <div style="max-width: 900px; margin: 0 auto; position: relative; z-index: 2;">
+        <div style="margin-bottom: 24px;">
+            <div style="width: 160px; height: 160px; background: white; border-radius: 30px; display: inline-flex; align-items: center; justify-content: center; padding: 10px; box-shadow: 0 20px 45px rgba(0,0,0,0.4);">
+                <img src="{{ asset('images/logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+        </div>
+
         <span style="background: rgba(217, 119, 6, 0.2); color: var(--accent-gold); border: 1px solid var(--accent); padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 800; display: inline-block; margin-bottom: 20px;">
             ✨ إيمان + تعليم + مجتمع + تقدم
         </span>
-        <h1 style="font-size: 48px; font-weight: 900; line-height: 1.2; margin-bottom: 20px; letter-spacing: -0.5px;">
-            منصة مدرسة الكتاب المقدس والتربية الكنسية
+        <h1 style="font-size: 44px; font-weight: 900; line-height: 1.2; margin-bottom: 20px; letter-spacing: -0.5px;">
+            منصة مدرسة القديس تيموثاوس للكتاب المقدس
         </h1>
         <p style="font-size: 18px; color: #94a3b8; margin-bottom: 36px; line-height: 1.8;">
-            نظام تعليمي وتربوي متكامل يربط بين الطلاب، الخدام، المسؤولين، وأولياء الأمور لتوفير تجربة تعلم تفاعلية ومحفزة في المناهج الكنسية وآيات الكتاب المقدس.
+            نظام تعليمي وتربوي متكامل يربط بين الطلاب، الخدام،  وأولياء الأمور لتوفير تجربة تعلم تفاعلية ومحفزة في المناهج الكنسية وآيات الكتاب المقدس.
         </p>
         <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
             <a href="{{ route('register') }}" class="btn btn-accent" style="padding: 14px 32px; font-size: 16px; border-radius: 30px;">
@@ -92,7 +98,7 @@
 
 <!-- Footer -->
 <footer style="background: var(--primary-dark); color: #94a3b8; padding: 40px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1);">
-    <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 8px;">مدرسة الكتاب المقدس</div>
-    <div style="font-size: 13px; margin-bottom: 20px;">جميع الحقوق محفوظة © {{ date('Y') }} - مدرسة الكتاب المقدس</div>
+    <div style="font-size: 18px; font-weight: 800; color: white; margin-bottom: 8px;">مدرسة القديس تيموثاوس لدراسة الكتاب المقدس</div>
+    <div style="font-size: 13px; margin-bottom: 20px;">جميع الحقوق محفوظة © {{ date('Y') }} - مدرسة القديس تيموثاوس لدراسة الكتاب المقدس</div>
 </footer>
 @endsection

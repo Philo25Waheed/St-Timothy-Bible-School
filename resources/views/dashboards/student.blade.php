@@ -5,12 +5,41 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">أهلاً بك يا {{ Auth::user()->name }} 👋</h1>
-        <p class="page-subtitle">رحلتك التعليمية والروحية بـ {{ $student->grade->name ?? 'مدرسة الكتاب المقدس' }}</p>
+        <p class="page-subtitle">الطالب بـ {{ $student->grade->name ?? 'مدرسة الكتاب المقدس' }}</p>
     </div>
-    <div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-primary rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#studentQrModal">
+            <i class="bi bi-qr-code-scan me-1"></i> كارت الهوية & QR Code
+        </button>
         <span style="background: linear-gradient(135deg, #ef4444, #d97706); color: white; padding: 8px 18px; border-radius: 20px; font-weight: 800; font-size: 14px; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">
             🔥 {{ $streakWeeks }} أسابيع متتالية
         </span>
+    </div>
+</div>
+
+<!-- Student QR Code Badge Modal -->
+<div class="modal fade" id="studentQrModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4 text-center">
+            <div class="modal-header border-0 bg-primary text-white rounded-top-4">
+                <h6 class="modal-title fw-bold"><i class="bi bi-person-badge-fill me-2"></i> كارت هوية الطالب</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <img src="{{ Auth::user()->avatar_url }}" class="rounded-circle mb-2 border border-3 border-primary shadow-sm" width="80" height="80" alt="Avatar">
+                <h5 class="fw-bold text-dark mb-1">{{ Auth::user()->name }}</h5>
+                <p class="badge bg-primary text-white rounded-pill px-3 py-1 mb-3">{{ $student->schoolClass->name ?? 'مدرسة الكتاب المقدس' }}</p>
+
+                <!-- QR Code Display -->
+                <div class="p-3 bg-light rounded-4 border d-inline-block shadow-inner mb-3">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ urlencode($student->code) }}" width="150" height="150" alt="Student QR Code" class="img-fluid rounded-3">
+                </div>
+                <div class="bg-dark text-white p-2 rounded-3 fw-bold tracking-wider fs-5">
+                    {{ $student->code }}
+                </div>
+                <small class="text-muted d-block mt-2">اعرض هذا الكود لخادم الفصل لتسجيل الحضور فوراً ⚡</small>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -19,7 +48,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div>
             <h3 style="font-size: 18px; font-weight: 800;">تقدمك في المنهج الدراسي</h3>
-            <p style="font-size: 13px; color: #94a3b8;">أنجزت {{ $completedLessonsCount }} من إجمالي {{ $totalLessons }} درس</p>
+            <p style="font-size: 13px; color: #94a3b8;">خلصت {{ $completedLessonsCount }} من إجمالي {{ $totalLessons }} درس</p>
         </div>
         <div style="font-size: 28px; font-weight: 900; color: var(--accent-gold);">{{ $curriculumProgress }}%</div>
     </div>
@@ -135,7 +164,7 @@
 
     <!-- Achievements / Badges -->
     <div class="card">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;"><i class="fas fa-trophy" style="color: var(--accent);"></i> أوسمتي وإنجازاتي</h3>
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;"><i class="fas fa-trophy" style="color: var(--accent);"></i> إنجازاتي</h3>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             @forelse($student->achievements as $ach)
                 <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: var(--radius-sm); padding: 10px 16px; text-align: center;">

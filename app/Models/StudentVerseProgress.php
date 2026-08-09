@@ -26,6 +26,11 @@ class StudentVerseProgress extends Model
         return $this->belongsTo(BibleVerse::class, 'bible_verse_id');
     }
 
+    public function verse()
+    {
+        return $this->belongsTo(BibleVerse::class, 'bible_verse_id');
+    }
+
     public function checker()
     {
         return $this->belongsTo(User::class, 'checked_by');

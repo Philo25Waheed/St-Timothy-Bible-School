@@ -4,10 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'لوحة التحكم') - مدرسة الكتاب المقدس</title>
+    <title>@yield('title', 'لوحة التحكم') - مدرسة القديس تيموثاوس للكتاب المقدس</title>
 
-    <!-- FontAwesome 6 -->
+    <!-- Favicon / Tab Logo -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
+
+    <!-- FontAwesome 6 & Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Custom EdTech Stylesheet -->
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
@@ -22,11 +30,11 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-logo">
-                    <i class="fas fa-bible"></i>
+                <div class="brand-logo" style="width: 58px; height: 58px; background: #ffffff; padding: 4px; border: 1px solid rgba(255,255,255,0.25); border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain; border-radius: 10px;">
                 </div>
                 <div>
-                    <div class="brand-name">مدرسة الكتاب المقدس</div>
+                    <div class="brand-name" style="font-size: 15px; font-weight: 800;">مدرسة القديس تيموثاوس للكتاب المقدس</div>
                     <div style="font-size: 11px; color: var(--accent-gold);">Faith • Knowledge • Spirit</div>
                 </div>
             </div>
@@ -91,6 +99,10 @@
                         <i class="fas fa-file-pen"></i>
                         <span>الامتحانات الرسمية</span>
                     </a>
+                    <a href="{{ route('servant.prayers.index') }}" class="sidebar-item {{ request()->routeIs('servant.prayers.*') ? 'active' : '' }}">
+                        <i class="bi bi-hands-fill text-danger"></i>
+                        <span>طلبات صلوات الطلاب</span>
+                    </a>
                     <a href="{{ route('reports.index') }}" class="sidebar-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
                         <i class="fas fa-chart-line"></i>
                         <span>التقارير والإحصائيات</span>
@@ -99,9 +111,17 @@
 
                 @if(Auth::user()->isServant())
                     <div class="sidebar-label">الخدمة وفصلي</div>
-                    <a href="{{ route('attendance.index') }}" class="sidebar-item {{ request()->routeIs('attendance.*') ? 'active' : '' }}">
+                    <a href="{{ route('attendance.index') }}" class="sidebar-item {{ request()->routeIs('attendance.index') ? 'active' : '' }}">
                         <i class="fas fa-clipboard-user"></i>
                         <span>تسجيل الحضور اليومي</span>
+                    </a>
+                    <a href="{{ route('attendance.qr_scanner') }}" class="sidebar-item {{ request()->routeIs('attendance.qr_scanner') ? 'active' : '' }}">
+                        <i class="bi bi-qr-code-scan text-success"></i>
+                        <span>ماسح QR Code الحضور</span>
+                    </a>
+                    <a href="{{ route('servant.prayers.index') }}" class="sidebar-item {{ request()->routeIs('servant.prayers.*') ? 'active' : '' }}">
+                        <i class="bi bi-hands-fill text-danger"></i>
+                        <span>صلوات الطلاب والافتقاد</span>
                     </a>
                     <a href="{{ route('quizzes.index') }}" class="sidebar-item {{ request()->routeIs('quizzes.*') ? 'active' : '' }}">
                         <i class="fas fa-tasks"></i>
@@ -119,16 +139,34 @@
                         <i class="fas fa-book-bookmark"></i>
                         <span>منهجي والدروس</span>
                     </a>
+                    <a href="{{ route('journal.index') }}" class="sidebar-item {{ request()->routeIs('journal.*') ? 'active' : '' }}">
+                        <i class="bi bi-journal-bookmark-fill text-primary"></i>
+                        <span>دفتر التخصيص والصلوات</span>
+                    </a>
                     <a href="{{ route('verses.index') }}" class="sidebar-item {{ request()->routeIs('verses.*') ? 'active' : '' }}">
                         <i class="fas fa-quote-right"></i>
                         <span>آيات الحفظ</span>
                     </a>
                 @endif
 
+                @if(Auth::user()->isParent())
+                    <div class="sidebar-label">متابعة الأبناء</div>
+                    <a href="{{ route('parent.weekly_digest') }}" class="sidebar-item {{ request()->routeIs('parent.weekly_digest') ? 'active' : '' }}">
+                        <i class="bi bi-file-earmark-bar-graph-fill text-info"></i>
+                        <span>التقرير الأسبوعي للأبناء</span>
+                    </a>
+                @endif
+
                 <div class="sidebar-label">التواصل والأنشطة</div>
+                @php
+                    $unreadMessagesBadge = \App\Models\Message::where('receiver_id', Auth::id())->where('is_read', false)->count();
+                @endphp
                 <a href="{{ route('messages.index') }}" class="sidebar-item {{ request()->routeIs('messages.*') ? 'active' : '' }}">
                     <i class="fas fa-comments"></i>
                     <span>الرسائل المباشرة</span>
+                    @if($unreadMessagesBadge > 0)
+                        <span class="badge bg-danger rounded-pill me-auto">{{ $unreadMessagesBadge }}</span>
+                    @endif
                 </a>
                 <a href="{{ route('notifications.index') }}" class="sidebar-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
                     <i class="fas fa-bell"></i>
@@ -136,7 +174,11 @@
                 </a>
                 <a href="{{ route('events.index') }}" class="sidebar-item {{ request()->routeIs('events.*') ? 'active' : '' }}">
                     <i class="fas fa-calendar-check"></i>
-                    <span>التقويم والفعاليات</span>
+                    <span>التقويم والرحلات</span>
+                </a>
+                <a href="{{ route('events.gallery') }}" class="sidebar-item {{ request()->routeIs('events.gallery') ? 'active' : '' }}">
+                    <i class="bi bi-images text-purple"></i>
+                    <span>معرض الصور والألبوم</span>
                 </a>
                 <a href="{{ route('news.index') }}" class="sidebar-item {{ request()->routeIs('news.*') ? 'active' : '' }}">
                     <i class="fas fa-newspaper"></i>
@@ -149,8 +191,17 @@
         <main class="main-content">
             <!-- Top Navbar -->
             <header class="topbar">
-                <div class="topbar-right">
-                    <a href="{{ route('notifications.index') }}" style="position: relative; font-size: 18px; color: var(--text-muted);">
+                <div class="topbar-right d-flex align-items-center gap-3">
+                    <a href="{{ route('messages.index') }}" style="position: relative; font-size: 18px; color: var(--text-muted);" title="الرسائل المباشرة">
+                        <i class="bi bi-chat-dots-fill"></i>
+                        @if($unreadMessagesBadge > 0)
+                            <span style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                {{ $unreadMessagesBadge }}
+                            </span>
+                        @endif
+                    </a>
+
+                    <a href="{{ route('notifications.index') }}" style="position: relative; font-size: 18px; color: var(--text-muted);" title="الإشعارات">
                         <i class="fas fa-bell"></i>
                         @php
                             $unreadCount = Auth::user()->notifications()->where('is_read', false)->count();

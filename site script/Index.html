@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدرسة الكتاب المقدس | Google Apps Script Web App</title>
+  <!-- FontAwesome Icons & Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <?!= include('Styles'); ?>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-logo">
+        <div class="brand-icon">
+          <i class="fa-solid fa-bible"></i>
+        </div>
+        <div class="brand-text">
+          <h2>مدرسة الكتاب المقدس</h2>
+          <p>Google Script Edition</p>
+        </div>
+      </div>
+
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <button id="nav-dashboard" class="active" onclick="switchView('dashboard')">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>لوحة التحكم الرئيسية</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-students" onclick="switchView('students')">
+            <i class="fa-solid fa-user-graduate"></i>
+            <span>إدارة الطلاب (الفصول)</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-servants" onclick="switchView('servants')">
+            <i class="fa-solid fa-hands-holding-child"></i>
+            <span>دليل الخدام والافتفاد</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-curriculum" onclick="switchView('curriculum')">
+            <i class="fa-solid fa-book-open-reader"></i>
+            <span>المناهج والدروس الرقمية</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-quizzes" onclick="switchView('quizzes')">
+            <i class="fa-solid fa-feather-pointed"></i>
+            <span>الاختبارات والمسابقات</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-attendance" onclick="switchView('attendance')">
+            <i class="fa-solid fa-clipboard-user"></i>
+            <span>دفتر الحضور اليومي</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-points" onclick="switchView('points')">
+            <i class="fa-solid fa-award"></i>
+            <span>نقاط التفاعل والوسامات</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-verses" onclick="switchView('verses')">
+            <i class="fa-solid fa-scroll"></i>
+            <span>حفظ وتسميع الآيات</span>
+          </button>
+        </li>
+        <li class="nav-item">
+          <button id="nav-news" onclick="switchView('news')">
+            <i class="fa-solid fa-bullhorn"></i>
+            <span>الأخبار واللوحة الإعلانية</span>
+          </button>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Body -->
+    <main class="main-content">
+      <!-- Top Sticky Header -->
+      <header class="top-header">
+        <div class="role-selector">
+          <label><i class="fa-solid fa-user-gear"></i> عرض بحسب دور:</label>
+          <select id="role-select" onchange="onRoleChanged(this.value)">
+            <option value="admin" selected>مسؤول النظام (Admin)</option>
+            <option value="servant">خادم فصل (Servant)</option>
+            <option value="student">طالب (Student)</option>
+            <option value="parent">ولي أمر (Parent)</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <button class="btn btn-outline" onclick="setupGoogleSheetBackend()" title="مزامنة وتفعيل Google Sheets">
+            <i class="fa-solid fa-file-excel" style="color: #10b981;"></i>
+            <span>إعداد Google Sheet</span>
+          </button>
+
+          <div class="user-profile">
+            <img id="user-avatar-img" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar">
+            <div class="user-info">
+              <h4 id="user-display-name">أ/ بطرس كميل</h4>
+              <span id="user-display-role">مسؤول النظام</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Dynamic View Container -->
+      <div id="app-view" class="view-container">
+        <!-- Dynamic HTML will be rendered here by ClientScript.html -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Add Student -->
+  <div id="modal-add-student" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus"></i> إضافة طالب جديد</h3>
+        <button class="close-modal" onclick="closeModal('modal-add-student')">&times;</button>
+      </div>
+      <form onsubmit="handleSaveStudent(event)">
+        <div class="form-group">
+          <label>اسم الطالب بالكامل</label>
+          <input type="text" id="stu-name" required placeholder="مثال: يوسف مينا حنا">
+        </div>
+        <div class="form-group">
+          <label>المرحلة الدراسية</label>
+          <select id="stu-stage">
+            <option>المرحلة الإبتدائية</option>
+            <option>المرحلة الإعدادية</option>
+            <option>المرحلة الثانوية</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الفصل الدراسي</label>
+          <input type="text" id="stu-class" placeholder="مثال: فصل القديس أثناسيوس">
+        </div>
+        <div class="form-group">
+          <label>الخادم المسؤول</label>
+          <input type="text" id="stu-servant" placeholder="مثال: أ. مينا سامي">
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modal-add-student')">إلغاء</button>
+          <button type="submit" class="btn btn-primary">حفظ الطالب</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Video Player -->
+  <div id="modal-video-player" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 id="video-modal-title">عرض الفيديو التعليمي</h3>
+        <button class="close-modal" onclick="closeModal('modal-video-player')">&times;</button>
+      </div>
+      <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; background: #000;">
+        <iframe id="video-frame" style="position: absolute; top:0; left: 0; width: 100%; height: 100%; border:0;" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('ClientScript'); ?>
+</body>
+</html>

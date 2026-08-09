@@ -16,11 +16,11 @@ class MessageController extends Controller
     {
         $user = Auth::user();
 
-        // Available contacts to message based on user role
+        // 1. Calculate available contacts based on strict role permissions
         $availableContacts = collect();
 
         if ($user->isStudent()) {
-            // Student can message: Class servant(s) & Admin
+            // Student can message: Class servant(s) & Admin(s)
             $studentProfile = $user->studentProfile;
             $servantIds = collect();
 
@@ -47,7 +47,7 @@ class MessageController extends Controller
             })->orWhere('role', 'admin')->where('id', '!=', $user->id)->get();
 
         } elseif ($user->isServant()) {
-            // Servant can message: Class students, their parents, & Admin
+            // Servant can message: Class students, their parents, & Admin(s)
             $classIdsPivot = $user->assignedClasses()->pluck('classes.id');
             $classIdsDirect = SchoolClass::where('servant_id', $user->id)->pluck('id');
             $classIds = $classIdsPivot->merge($classIdsDirect)->unique()->filter();
@@ -68,7 +68,7 @@ class MessageController extends Controller
             })->orWhere('role', 'admin')->where('id', '!=', $user->id)->get();
 
         } elseif ($user->isParent()) {
-            // Parent can message: Children's class servants & Admin
+            // Parent can message: Children's class servants & Admin(s)
             $studentProfiles = StudentProfile::where('parent_id', $user->id)->get();
             $servantIds = $studentProfiles->pluck('servant_id')->filter();
             $classIds = $studentProfiles->pluck('class_id')->filter();
@@ -87,21 +87,49 @@ class MessageController extends Controller
             $availableContacts = User::where('id', '!=', $user->id)->get();
         }
 
-        // Fetch conversations
-        $conversations = Message::where('sender_id', $user->id)
+        // 2. Fetch all raw messages for user and group by conversation partner
+        $rawMessages = Message::where('sender_id', $user->id)
             ->orWhere('receiver_id', $user->id)
             ->latest()
-            ->get()
-            ->groupBy(function($msg) use ($user) {
-                return $msg->sender_id == $user->id ? $msg->receiver_id : $msg->sender_id;
-            });
+            ->get();
 
-        $contactIds = $conversations->keys();
-        $contacts = User::whereIn('id', $contactIds)->get()->keyBy('id');
+        $grouped = $rawMessages->groupBy(function($msg) use ($user) {
+            return $msg->sender_id == $user->id ? $msg->receiver_id : $msg->sender_id;
+        });
 
-        $activeContactId = $request->query('user_id', $availableContacts->first()?->id);
-        $activeContact = $activeContactId ? User::find($activeContactId) : null;
+        // 3. Build WhatsApp-style sorted conversation list (Newest message first)
+        $conversations = collect();
 
+        foreach ($grouped as $otherUserId => $msgList) {
+            $contact = User::find($otherUserId);
+            if (!$contact) continue;
+
+            $lastMessage = $msgList->first(); // latest() sort
+            $unreadCount = $msgList->where('receiver_id', $user->id)->where('is_read', false)->count();
+
+            $conversations->push([
+                'contact' => $contact,
+                'last_message' => $lastMessage,
+                'unread_count' => $unreadCount,
+                'updated_at' => $lastMessage->created_at,
+            ]);
+        }
+
+        // Sort by last message created_at descending
+        $conversations = $conversations->sortByDesc('updated_at')->values();
+
+        // 4. Select active contact (from request param or top conversation or first available contact)
+        $activeContactId = $request->query('user_id');
+        
+        if ($activeContactId) {
+            $activeContact = User::find($activeContactId);
+        } else if ($conversations->isNotEmpty()) {
+            $activeContact = $conversations->first()['contact'];
+        } else {
+            $activeContact = $availableContacts->first();
+        }
+
+        // 5. Load active thread messages and mark unread as read
         $messages = [];
         if ($activeContact) {
             $messages = Message::where(function($q) use ($user, $activeContact) {
@@ -110,14 +138,25 @@ class MessageController extends Controller
                 $q->where('sender_id', $activeContact->id)->where('receiver_id', $user->id);
             })->orderBy('created_at')->get();
 
-            // Mark as read
+            // Mark as read for current active contact
             Message::where('sender_id', $activeContact->id)
                 ->where('receiver_id', $user->id)
                 ->where('is_read', false)
                 ->update(['is_read' => true, 'read_at' => now()]);
         }
 
-        return view('messages.index', compact('conversations', 'contacts', 'activeContact', 'messages', 'availableContacts'));
+        // Total unread count across all conversations
+        $totalUnreadMessages = Message::where('receiver_id', $user->id)
+            ->where('is_read', false)
+            ->count();
+
+        return view('messages.index', compact(
+            'conversations',
+            'activeContact',
+            'messages',
+            'availableContacts',
+            'totalUnreadMessages'
+        ));
     }
 
     public function store(Request $request)

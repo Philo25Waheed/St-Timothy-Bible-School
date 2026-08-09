@@ -98,6 +98,77 @@ class ParentController extends Controller
         if (!$parent->isParent()) abort(404);
         StudentProfile::where('parent_id', $parent->id)->update(['parent_id' => null]);
         $parent->delete();
-        return redirect()->route('parents.index')->with('success', 'تم حذف ولي الأمر بنجاح.');
+        return redirect()->route('parents.index')->with('success', 'تم حذف حساب ولي الأمر بنجاح.');
+    }
+
+    /**
+     * Parent Weekly Digest Page
+     */
+    public function weeklyDigest()
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+
+        // Get parent children
+        $children = StudentProfile::where('parent_id', $user->id)
+            ->with(['user', 'grade', 'schoolClass', 'points', 'attendanceRecords', 'verseProgress.verse', 'quizAttempts.quiz', 'examAttempts.exam'])
+            ->get();
+
+        $startOfWeek = \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::SUNDAY);
+        $endOfWeek = \Carbon\Carbon::now()->endOfWeek(\Carbon\Carbon::THURSDAY);
+
+        $childrenData = [];
+
+        foreach ($children as $child) {
+            // Weekly attendance
+            $weeklyAttendance = $child->attendanceRecords()
+                ->whereBetween('date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                ->get();
+
+            $presentDays = $weeklyAttendance->where('status', 'present')->count();
+            $absentDays = $weeklyAttendance->where('status', 'absent')->count();
+
+            // Weekly points
+            $weeklyPoints = $child->points()
+                ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                ->sum('amount');
+
+            $totalPoints = $child->points()->sum('amount');
+
+            // Verses progress
+            $completedVerses = $child->verseProgress()
+                ->where('status', 'completed')
+                ->with('verse')
+                ->get();
+
+            // Recent Quizzes
+            $recentQuizzes = $child->quizAttempts()
+                ->with('quiz')
+                ->latest()
+                ->take(5)
+                ->get();
+
+            // Direct WhatsApp alert link for absence or progress share
+            $whatsappMessage = \App\Services\WhatsAppNotificationService::buildAbsenceMessage(
+                $user->name,
+                $child->user->name,
+                $child->schoolClass?->name ?? 'مدرسة القديس تيموثاوس للكتاب المقدس',
+                \Carbon\Carbon::today()->format('Y-m-d')
+            );
+            $whatsappLink = \App\Services\WhatsAppNotificationService::generateLink($user->phone ?? '01000000000', $whatsappMessage);
+
+            $childrenData[] = [
+                'profile' => $child,
+                'user' => $child->user,
+                'present_days' => $presentDays,
+                'absent_days' => $absentDays,
+                'weekly_points' => $weeklyPoints,
+                'total_points' => $totalPoints,
+                'completed_verses' => $completedVerses,
+                'recent_quizzes' => $recentQuizzes,
+                'whatsapp_link' => $whatsappLink,
+            ];
+        }
+
+        return view('parent.weekly_digest', compact('user', 'childrenData', 'startOfWeek', 'endOfWeek'));
     }
 }

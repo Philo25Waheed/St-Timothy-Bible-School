@@ -31,4 +31,14 @@ class Event extends Model
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
     }
+
+    public function registrations()
+    {
+        return $this->hasMany(EventRegistration::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(EventPhoto::class);
+    }
 }

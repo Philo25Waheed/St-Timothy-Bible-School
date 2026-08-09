@@ -1,0 +1,641 @@
+<script>
+  /**
+   * App State & Local Storage Fallback Engine
+   */
+  var appState = {
+    currentRole: 'admin',
+    currentView: 'dashboard',
+    data: null
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    initApp();
+  });
+
+  function initApp() {
+    fetchInitialData();
+  }
+
+  /**
+   * Hybrid Data Connector (Google Apps Script API + Standalone LocalStorage Fallback)
+   */
+  function fetchInitialData() {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response && response.data) {
+            appState.data = response.data;
+            renderCurrentView();
+          }
+        })
+        .apiGetInitialData();
+    } else {
+      // Local Browser Fallback Mode (For immediate testing & preview without GAS deployment)
+      var cached = localStorage.getItem('bibleschool_gas_db');
+      if (cached) {
+        appState.data = JSON.parse(cached);
+      } else {
+        appState.data = getFallbackMockData();
+        saveLocalState();
+      }
+      renderCurrentView();
+    }
+  }
+
+  function saveLocalState() {
+    if (appState.data) {
+      localStorage.setItem('bibleschool_gas_db', JSON.stringify(appState.data));
+    }
+  }
+
+  function setupGoogleSheetBackend() {
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      alert('جاري إنشاء وإعداد الجداول في Google Sheets...');
+      google.script.run
+        .withSuccessHandler(function(res) {
+          alert(res.message + '\nرابط الشيت: ' + res.spreadsheetUrl);
+        })
+        .apiSetupSpreadsheet();
+    } else {
+      alert('ميزة المزامنة المباشرة مع Google Sheets تعمل فور نشر السكريبت كـ Web App على script.google.com.\n\nتكون قاعدة البيانات حالياً محفوظة محلياً في المتصفح.');
+    }
+  }
+
+  /**
+   * View Router Engine
+   */
+  function switchView(viewName) {
+    appState.currentView = viewName;
+    
+    // Update active navbar button
+    document.querySelectorAll('.nav-item button').forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+    var targetNavBtn = document.getElementById('nav-' + viewName);
+    if (targetNavBtn) targetNavBtn.classList.add('active');
+
+    renderCurrentView();
+  }
+
+  function renderCurrentView() {
+    var container = document.getElementById('app-view');
+    if (!appState.data) {
+      container.innerHTML = '<div style="text-align:center; padding: 4rem;"><h3>جاري تحميل البيانات...</h3></div>';
+      return;
+    }
+
+    switch (appState.currentView) {
+      case 'dashboard': renderDashboard(container); break;
+      case 'students': renderStudents(container); break;
+      case 'servants': renderServants(container); break;
+      case 'curriculum': renderCurriculum(container); break;
+      case 'quizzes': renderQuizzes(container); break;
+      case 'attendance': renderAttendance(container); break;
+      case 'points': renderPoints(container); break;
+      case 'verses': renderVerses(container); break;
+      case 'news': renderNews(container); break;
+      default: renderDashboard(container); break;
+    }
+  }
+
+  function onRoleChanged(role) {
+    appState.currentRole = role;
+    var nameElem = document.getElementById('user-display-name');
+    var roleElem = document.getElementById('user-display-role');
+
+    if (role === 'admin') {
+      nameElem.textContent = 'أ/ بطرس كميل';
+      roleElem.textContent = 'مسؤول النظام (Admin)';
+    } else if (role === 'servant') {
+      nameElem.textContent = 'أ/ مينا سامي';
+      roleElem.textContent = 'خادم فصل (Servant)';
+    } else if (role === 'student') {
+      nameElem.textContent = 'بيشوي مينا عادل';
+      roleElem.textContent = 'طالب (Student)';
+    } else if (role === 'parent') {
+      nameElem.textContent = 'أ/ مينا عادل (ولي أمر)';
+      roleElem.textContent = 'ولي أمر (Parent)';
+    }
+
+    renderCurrentView();
+  }
+
+  /* -------------------------------------------------------------
+     VIEWS RENDER FUNCTIONS
+   ------------------------------------------------------------- */
+
+  function renderDashboard(container) {
+    var stats = appState.data.stats;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>لوحة التحكم والإحصائيات</h1>
+          <p>مرحباً بك في منصة مدرسة الكتاب المقدس الرقمية المستضافة عبر Google Apps Script</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-student')">
+          <i class="fa-solid fa-plus"></i> إضافة طالب جديد
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon primary"><i class="fa-solid fa-user-graduate"></i></div>
+          <div class="stat-details">
+            <h3>${stats.totalStudents}</h3>
+            <p>إجمالي الطلاب المقيدين</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon amber"><i class="fa-solid fa-hands-holding-child"></i></div>
+          <div class="stat-details">
+            <h3>${stats.totalServants}</h3>
+            <p>عدد الخدام بالفصول</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon emerald"><i class="fa-solid fa-feather-pointed"></i></div>
+          <div class="stat-details">
+            <h3>${stats.activeQuizzes}</h3>
+            <p>الاختبارات والمسابقات النشطة</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon rose"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="stat-details">
+            <h3>${stats.attendanceRate}</h3>
+            <p>نسبة الحضور الأسبوعية</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title-text"><i class="fa-solid fa-users" style="color: var(--primary-light);"></i> أحدث الطلاب المضافين</h3>
+            <button class="btn btn-outline" onclick="switchView('students')">عرض الكل</button>
+          </div>
+          <div class="custom-table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th>الكود</th>
+                  <th>اسم الطالب</th>
+                  <th>المرحلة</th>
+                  <th>الفصل</th>
+                  <th>النقاط</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${appState.data.students.slice(0, 4).map(function(s) {
+                  return `
+                    <tr>
+                      <td><span class="badge indigo">${s.code}</span></td>
+                      <td><b>${s.name}</b></td>
+                      <td>${s.stage}</td>
+                      <td>${s.className}</td>
+                      <td><span class="badge amber"><i class="fa-solid fa-star"></i> ${s.points}</span></td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <div class="card-header-bar">
+            <h3 class="card-title-text"><i class="fa-solid fa-bullhorn" style="color: var(--secondary);"></i> لوحة الإعلانات</h3>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${appState.data.news.map(function(n) {
+              return `
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border-right: 3px solid var(--secondary);">
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">${n.date} - ${n.category}</div>
+                  <h4 style="font-size: 0.95rem; margin: 4px 0; font-weight: 700;">${n.title}</h4>
+                  <p style="font-size: 0.85rem; color: var(--text-muted);">${n.content}</p>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderStudents(container) {
+    var students = appState.data.students;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>إدارة الطلاب وفصول التربية الكنسية</h1>
+          <p>قائمة كشوف جميع الطلاب المسجلين بالمدارس والمراحل المختلفة</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-student')">
+          <i class="fa-solid fa-user-plus"></i> إضافة طالب
+        </button>
+      </div>
+
+      <div class="content-card">
+        <div class="custom-table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>كود الطالب</th>
+                <th>اسم الطالب</th>
+                <th>المرحلة الدراسية</th>
+                <th>الصف والفصل</th>
+                <th>الخادم المسؤول</th>
+                <th>رصيد النقاط</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.map(function(s) {
+                return `
+                  <tr>
+                    <td><span class="badge indigo">${s.code}</span></td>
+                    <td><b>${s.name}</b></td>
+                    <td>${s.stage}</td>
+                    <td>${s.className}</td>
+                    <td>${s.servant}</td>
+                    <td><span class="badge amber"><i class="fa-solid fa-star"></i> ${s.points}</span></td>
+                    <td>
+                      <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="addPointsPrompt('${s.id}')">
+                        <i class="fa-solid fa-plus"></i> منح نقاط
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderServants(container) {
+    var servants = appState.data.servants;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>دليل الخدام والافتقاد</h1>
+          <p>سجل بيانات جميع خدام ومسؤولي الفصول بالمدرسة</p>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <div class="custom-table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>اسم الخادم</th>
+                <th>رقم الهاتف</th>
+                <th>الفصل المسؤول عنه</th>
+                <th>البريد الإلكتروني</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${servants.map(function(srv) {
+                return `
+                  <tr>
+                    <td><span class="badge emerald">${srv.id}</span></td>
+                    <td><b>${srv.name}</b></td>
+                    <td>${srv.phone}</td>
+                    <td>${srv.className}</td>
+                    <td>${srv.email}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderCurriculum(container) {
+    var items = appState.data.curricula;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>المناهج والدروس الرقمية</h1>
+          <p>المحتوى التعليمي والدروس التفاعلية مع مقاطع الفيديو المرفقة</p>
+        </div>
+      </div>
+
+      <div class="grid-cards">
+        ${items.map(function(c) {
+          return `
+            <div class="lesson-card">
+              <div>
+                <div class="lesson-tag">${c.unit}</div>
+                <h3 class="lesson-title">${c.lesson_title}</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">${c.title}</p>
+                <div class="verse-box">
+                  <i class="fa-solid fa-quote-right" style="margin-left: 6px;"></i> ${c.verses}
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="openVideoModal('${c.video_url}', '${c.lesson_title}')">
+                  <i class="fa-solid fa-play"></i> مشاهدة الدرس
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderQuizzes(container) {
+    var quizzes = appState.data.quizzes;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>الاختبارات والمسابقات الروحية</h1>
+          <p>امتحانات أسبوعية وشهرية لتقييم تحصيل الطلاب ومنح الأوسمة</p>
+        </div>
+      </div>
+
+      <div class="grid-cards">
+        ${quizzes.map(function(q) {
+          return `
+            <div class="lesson-card">
+              <div>
+                <div class="lesson-tag"><i class="fa-solid fa-bookmark"></i> ${q.subject}</div>
+                <h3 class="lesson-title">${q.title}</h3>
+                <div style="display: flex; gap: 15px; margin: 12px 0; font-size: 0.85rem; color: var(--text-muted);">
+                  <span><i class="fa-solid fa-question-circle"></i> ${q.questions_count} أسئلة</span>
+                  <span><i class="fa-solid fa-clock"></i> ${q.duration_min} دقيقة</span>
+                </div>
+              </div>
+              <button class="btn btn-amber" style="width:100%; justify-content:center;" onclick="takeQuizPrompt('${q.title}')">
+                <i class="fa-solid fa-pen-to-square"></i> بدء الاختبار الآن
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderAttendance(container) {
+    var students = appState.data.students;
+    var today = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>دفتر الحضور والغياب اليومي</h1>
+          <p>تاريخ اليوم: <b>${today}</b></p>
+        </div>
+        <button class="btn btn-emerald" onclick="saveAttendanceAll()">
+          <i class="fa-solid fa-floppy-disk"></i> حفظ كشف الحضور
+        </button>
+      </div>
+
+      <div class="content-card">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${students.map(function(s) {
+            return `
+              <div class="attendance-row">
+                <div>
+                  <b style="font-size: 1rem;">${s.name}</b>
+                  <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: 10px;">(${s.className})</span>
+                </div>
+                <div class="attendance-buttons">
+                  <button class="btn-status active-present" onclick="setAtt(this, 'حاضر')">حاضر</button>
+                  <button class="btn-status" onclick="setAtt(this, 'غائب')">غائب</button>
+                  <button class="btn-status" onclick="setAtt(this, 'متأخر')">متأخر</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderPoints(container) {
+    var students = appState.data.students;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>لوحة نقاط التفاعل والأوسمة</h1>
+          <p>لوحة الشرف وتنافس الطلاب في تحصيل النقاط والتشجيع الروحي</p>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <div class="custom-table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>الترتيب</th>
+                <th>الطالب</th>
+                <th>الفصل</th>
+                <th>مجموع النقاط</th>
+                <th>وسام التميز</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${students.slice().sort((a,b) => b.points - a.points).map(function(s, idx) {
+                var badge = idx === 0 ? '🏆 المركز الأول' : (idx === 1 ? '🥈 المركز الثاني' : '🥉 المركز الثالث');
+                return `
+                  <tr>
+                    <td><b>#${idx + 1}</b></td>
+                    <td><b>${s.name}</b></td>
+                    <td>${s.className}</td>
+                    <td><span class="badge amber" style="font-size: 0.9rem;"><i class="fa-solid fa-star"></i> ${s.points} نقطة</span></td>
+                    <td><span class="badge indigo">${badge}</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderVerses(container) {
+    var verses = appState.data.verses;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>جدول حفظ وتسميع الآيات</h1>
+          <p>الآيات الروحية المقررة ومتابعة حفظ الطلاب</p>
+        </div>
+      </div>
+
+      <div class="grid-cards">
+        ${verses.map(function(v) {
+          return `
+            <div class="lesson-card">
+              <div>
+                <span class="badge amber" style="margin-bottom: 8px;">${v.category}</span>
+                <h3 class="lesson-title" style="color: #fde68a;">${v.text}</h3>
+                <p style="font-weight: 700; color: var(--primary-light); margin-top: 6px;">${v.reference}</p>
+              </div>
+              <button class="btn btn-outline" style="margin-top: 15px;" onclick="alert('تم تسجيل تسميع الآية بنجاح للطالب!')">
+                <i class="fa-solid fa-check-double"></i> تسجيل التسميع
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  function renderNews(container) {
+    var news = appState.data.news;
+    var html = `
+      <div class="view-header">
+        <div class="view-title">
+          <h1>الأخبار والتنبيهات العامة</h1>
+          <p>لوحة الإعلانات الرسمية لمدرسة الكتاب المقدس</p>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        ${news.map(function(n) {
+          return `
+            <div class="content-card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span class="badge amber">${n.category}</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-regular fa-calendar"></i> ${n.date}</span>
+              </div>
+              <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;">${n.title}</h2>
+              <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${n.content}</p>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  /* -------------------------------------------------------------
+     MODALS & HANDLERS
+   ------------------------------------------------------------- */
+
+  function openModal(id) {
+    document.getElementById(id).classList.add('active');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+
+  function openVideoModal(url, title) {
+    document.getElementById('video-modal-title').textContent = title;
+    document.getElementById('video-frame').src = url;
+    openModal('modal-video-player');
+  }
+
+  function handleSaveStudent(e) {
+    e.preventDefault();
+    var name = document.getElementById('stu-name').value;
+    var stage = document.getElementById('stu-stage').value;
+    var className = document.getElementById('stu-class').value || 'فصل العامة';
+    var servant = document.getElementById('stu-servant').value || 'أ. الخادم المسؤول';
+
+    var newStu = {
+      id: 'STU-' + Math.floor(100 + Math.random() * 900),
+      name: name,
+      code: 'ST-' + Math.floor(100 + Math.random() * 900),
+      stage: stage,
+      grade: 'الصف الحالي',
+      className: className,
+      servant: servant,
+      points: 100
+    };
+
+    appState.data.students.unshift(newStu);
+    appState.data.stats.totalStudents++;
+    saveLocalState();
+    closeModal('modal-add-student');
+    renderCurrentView();
+
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run.apiSaveStudent(newStu);
+    }
+  }
+
+  function addPointsPrompt(stuId) {
+    var points = prompt('أدخل عدد النقاط المراد إضافتها للطالب:', '10');
+    if (points && !isNaN(points)) {
+      var stu = appState.data.students.find(s => s.id === stuId);
+      if (stu) {
+        stu.points += parseInt(points);
+        saveLocalState();
+        renderCurrentView();
+        alert(`تمت إضافة ${points} نقطة بنجاح إلى الطالب ${stu.name}`);
+      }
+    }
+  }
+
+  function setAtt(btn, status) {
+    var parent = btn.parentElement;
+    parent.querySelectorAll('.btn-status').forEach(b => b.className = 'btn-status');
+    if (status === 'حاضر') btn.className = 'btn-status active-present';
+    else if (status === 'غائب') btn.className = 'btn-status active-absent';
+    else if (status === 'متأخر') btn.className = 'btn-status active-late';
+  }
+
+  function saveAttendanceAll() {
+    alert('تم حفظ كشف الحضور والغياب لجميع الطلاب بنجاح!');
+  }
+
+  function takeQuizPrompt(title) {
+    alert(`جاري تجهيز ${title}...\nنتمنى لك التوفيق!`);
+  }
+
+  function getFallbackMockData() {
+    return {
+      stats: { totalStudents: 142, totalServants: 18, activeQuizzes: 6, attendanceRate: '94%' },
+      students: [
+        { id: 'STU-101', name: 'بيشوي مينا عادل', code: 'ST-101', stage: 'المرحلة الإبتدائية', grade: 'الصف الرابع', className: 'فصل القديس أثناسيوس', servant: 'أ. مينا سامي', points: 180 },
+        { id: 'STU-102', name: 'مارينا يوسف حنا', code: 'ST-102', stage: 'المرحلة الإبتدائية', grade: 'الصف الرابع', className: 'فصل العذراء مريم', servant: 'ت. سارة سمير', points: 210 },
+        { id: 'STU-103', name: 'كيرلس صموئيل فرج', code: 'ST-103', stage: 'المرحلة الإعدادية', grade: 'الصف الأول', className: 'فصل القديس مارمرقس', servant: 'أ. باسيليوس ماهر', points: 145 },
+        { id: 'STU-104', name: 'ساندرا مجدي رزق', code: 'ST-104', stage: 'المرحلة الإعدادية', grade: 'الصف الثاني', className: 'فصل القديسة دميانة', servant: 'ت. مريم نبيل', points: 260 },
+        { id: 'STU-105', name: 'دانيال رفيق مكرم', code: 'ST-105', stage: 'المرحلة الثانوية', grade: 'الصف الثالث', className: 'فصل القديس بولس', servant: 'أ. يوحنا رفعت', points: 195 }
+      ],
+      servants: [
+        { id: 'SRV-01', name: 'أ. مينا سامي', phone: '01223456789', className: 'فصل القديس أثناسيوس (رابع ابتدائي)', email: 'mina@bibleschool.eg' },
+        { id: 'SRV-02', name: 'ت. سارة سمير', phone: '01012345678', className: 'فصل العذراء مريم (رابع ابتدائي)', email: 'sara@bibleschool.eg' },
+        { id: 'SRV-03', name: 'أ. باسيليوس ماهر', phone: '01122334455', className: 'فصل القديس مارمرقس (أول إعدادي)', email: 'basil@bibleschool.eg' },
+        { id: 'SRV-04', name: 'ت. مريم نبيل', phone: '01200112233', className: 'فصل القديسة دميانة (ثاني إعدادي)', email: 'mary@bibleschool.eg' }
+      ],
+      curricula: [
+        { id: 'CUR-01', title: 'منهج العقيدة الأرثوذكسية', unit: 'الوحدة الأولى: قانون الإيمان', lesson_title: 'الدرس الأول: الإيمان بإله واحد ضابط الكل', video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', pdf_url: '#', verses: '«نُؤْمِنُ بِإِلهٍ وَاحِدٍ، اللهِ الآبِ ضَابِطِ الْكُلِّ»' },
+        { id: 'CUR-02', title: 'تاريخ الكنيسة والقديسين', unit: 'الوحدة الثانية: عصر الشهداء', lesson_title: 'الدرس الثاني: سيرة القديس مارجرجس الروماني', video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', pdf_url: '#', verses: '«كُنْ أَمِينًا إِلَى الْمَوْتِ فَسَأُعْطِيكَ إِكْلِيلَ الْحَيَاةِ» (رؤ 2: 10)' },
+        { id: 'CUR-03', title: 'دراسات في العهد الجديد', unit: 'الوحدة الأولى: إنجيل متى', lesson_title: 'الدرس الثالث: الموعظة على الجبل والطوبايات', video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', pdf_url: '#', verses: '«أَنْتُمْ نُورُ الْعَالَمِ. لاَ يُمْكِنُ أَنْ تُخْفَى مَدِينَةٌ مَوْضُوعَةٌ عَلَى جَبَلٍ» (مت 5: 14)' }
+      ],
+      quizzes: [
+        { id: 'QZ-101', title: 'اختبار دراسات الكتاب المقدس - شهر أغسطس', subject: 'العهد الجديد', questions_count: 5, duration_min: 15 },
+        { id: 'QZ-102', title: 'مسابقة طقس الكنيسة والألحان', subject: 'الطقس القبطي', questions_count: 10, duration_min: 20 },
+        { id: 'QZ-103', title: 'تحدي حفظ الآيات الروحية الأسبوعي', subject: 'آيات الإنجيل', questions_count: 5, duration_min: 10 }
+      ],
+      verses: [
+        { id: 'V-01', title: 'الآية الأسبوعية 1', reference: 'مزمور 119: 105', text: '«سِرَاجٌ لِرِجْلِي كَلاَمُكَ وَنُورٌ لِسَبِيلِي»', category: 'العهد القديم' },
+        { id: 'V-02', title: 'الآية الأسبوعية 2', reference: 'يوحنا 14: 6', text: '«أَنَا هُوَ الطَّرِيقُ وَالْحَقُّ وَالْحَيَاةُ. لَيْسَ أَحَدٌ يَأْتِي إِلَى الآبِ إِلاَّ بِي»', category: 'إنجيل يوحنا' },
+        { id: 'V-03', title: 'الآية الأسبوعية 3', reference: 'فيلبي 4: 13', text: '«أَسْتَطِيعُ كُلَّ شَيْءٍ فِي الْمَسِيحِ الَّذِي يُقَوِّينِي»', category: 'رسائل بولس الرسول' }
+      ],
+      news: [
+        { id: 'N-01', title: 'افتتاح مهرجان الكرازة المرقسية الصيفي', content: 'نعلن عن بدء فعاليات المهرجان الصيفي لجميع المراحل الدراسية يوم الجمعة القادم بعد القداس الالهي.', category: 'إعلان مهم', date: '2026-08-07' },
+        { id: 'N-02', title: 'رحلة الكشافة والخدمة إلى دير القديس أنبا بيشوي', content: 'تسجيل الأسماء متاح الآن لدى خدام الفصول، عدد الأماكن محدود.', category: 'رحلات', date: '2026-08-05' }
+      ]
+    };
+  }
+</script>

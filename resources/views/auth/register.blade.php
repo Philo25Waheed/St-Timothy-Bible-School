@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل حساب جديد - مدرسة الكتاب المقدس</title>
+    <title>تسجيل حساب جديد - مدرسة القديس تيموثاوس للكتاب المقدس</title>
+    <!-- Favicon / Tab Logo -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
 
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +61,11 @@
 
 <div class="register-card">
     <div style="text-align: center; margin-bottom: 30px;">
-        <a href="/" style="font-size: 32px; color: var(--accent);"><i class="fas fa-bible"></i></a>
+        <a href="/" style="display: inline-block;">
+            <div style="width: 105px; height: 105px; background: white; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; padding: 6px; box-shadow: 0 10px 25px rgba(0,0,0,0.18);">
+                <img src="{{ asset('images/logo.png') }}" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+        </a>
         <h1 style="font-size: 24px; font-weight: 800; color: var(--primary-dark); margin-top: 10px;">إنشاء حساب جديد بالمنصة</h1>
         <p style="color: var(--text-muted); font-size: 14px;">يرجى ملء البيانات المطلوبة لتقديم طلب إنشاء الحساب</p>
     </div>
@@ -193,7 +201,7 @@
 
         <!-- Information Alert -->
         <div style="background-color: #f0fdf4; color: #166534; border-right: 4px solid #22c55e; padding: 14px; border-radius: var(--radius-sm); margin-bottom: 24px; font-size: 13px; line-height: 1.6;">
-            <i class="fas fa-circle-info"></i> <strong>ملاحظة هامة:</strong> القبول غير فوري. سيتم تفعيل حسابك فور مراجعة واعتماد البيانات من قِبل إدارة مدرسة الكتاب المقدس، وسيتم إخطارك بالقبول عبر البريد الإلكتروني.
+            <i class="fas fa-circle-info"></i> <strong>ملاحظة هامة:</strong> القبول غير فوري. سيتم تفعيل حسابك فور مراجعة واعتماد البيانات من قِبل إدارة مدرسة القديس تيموثاوس للكتاب المقدس، وسيتم إخطارك بالقبول عبر البريد الإلكتروني.
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 16px;"><i class="fas fa-paper-plane"></i> تقديم طلب التسجيل</button>

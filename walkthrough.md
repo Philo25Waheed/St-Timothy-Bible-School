@@ -163,3 +163,18 @@ php artisan serve
 ```
 
 Access the application in your browser at `http://localhost:8000`.
+
+---
+
+## H. Google Apps Script Version (`site script/`)
+
+We have created the Google Apps Script version of the platform in the new [`site script`](file:///d:/bible%20school/site%20script) directory.
+
+### Structure:
+- [`Code.gs`](file:///d:/bible%20school/site%20script/Code.gs): GAS V8 engine backend handling `doGet`, dynamic templates, and Google Sheet table setup (`apiSetupSpreadsheet`).
+- [`Index.html`](file:///d:/bible%20school/site%20script/Index.html): Main HTML layout supporting RTL Arabic, responsive sidebar, role switcher header, and modal containers.
+- [`Styles.html`](file:///d:/bible%20school/site%20script/Styles.html): Full CSS design system with Tajawal font, glassmorphism, responsive grid, and custom Arabic EdTech components.
+- [`ClientScript.html`](file:///d:/bible%20school/site%20script/ClientScript.html): Client-side SPA engine managing all 9 views, modal handlers, and dual backend connectivity (`google.script.run` + standalone `localStorage` fallback).
+- [`appsscript.json`](file:///d:/bible%20school/site%20script/appsscript.json): Google Apps Script project manifest.
+- [`README.md`](file:///d:/bible%20school/site%20script/README.md): Step-by-step deployment guide for [script.google.com](https://script.google.com/).
+
