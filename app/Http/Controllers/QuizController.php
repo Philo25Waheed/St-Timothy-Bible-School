@@ -19,7 +19,7 @@ class QuizController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $query = Quiz::with(['lesson', 'creator', 'questions', 'schoolClass']);
+        $query = Quiz::with(['lesson', 'creator', 'questions', 'schoolClass.grade']);
 
         if ($user->isStudent()) {
             $student = StudentProfile::where('user_id', $user->id)->first();
@@ -28,9 +28,11 @@ class QuizController extends Controller
                     $q->where('class_id', $student->class_id)
                       ->orWhereNull('class_id');
                 });
+            } else {
+                $query->whereNull('class_id');
             }
         } elseif ($user->isServant()) {
-            $classIds = $user->assignedClasses->pluck('id');
+            $classIds = $user->assignedClasses->pluck('id')->toArray();
             $query->where(function($q) use ($user, $classIds) {
                 $q->whereIn('class_id', $classIds)
                   ->orWhere('created_by', $user->id);
@@ -44,20 +46,50 @@ class QuizController extends Controller
     public function create()
     {
         $user = Auth::user();
-        $lessons = Lesson::all();
-        $classes = $user->isServant() ? $user->assignedClasses : SchoolClass::all();
+        
+        if ($user->isServant()) {
+            $classes = $user->assignedClasses()->with('grade')->get();
+            if ($classes->isEmpty()) {
+                return redirect()->route('quizzes.index')->with('error', 'لم يتم إسناد أي فصل لك بعد لإنشاء اختبارات له. تواصل مع إدارة المدرسة.');
+            }
+            $gradeIds = $classes->pluck('grade_id')->filter()->unique()->toArray();
+            $lessons = Lesson::whereHas('unit.curriculum', function($q) use ($gradeIds) {
+                $q->whereIn('grade_id', $gradeIds);
+            })->get();
+            if ($lessons->isEmpty()) {
+                $lessons = Lesson::all();
+            }
+        } else {
+            $classes = SchoolClass::with('grade')->get();
+            $lessons = Lesson::all();
+        }
 
         return view('quizzes.create', compact('lessons', 'classes'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $user = Auth::user();
+        $rules = [
             'title' => 'required|string|max:255',
-            'class_id' => 'nullable|exists:classes,id',
             'lesson_id' => 'nullable|exists:lessons,id',
-            'duration_minutes' => 'required|integer|min:1',
-            'passing_score' => 'required|integer|min:1',
+            'duration_minutes' => 'required|integer|min:1|max:180',
+            'passing_score' => 'required|integer|min:1|max:100',
+        ];
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->assignedClasses->pluck('id')->toArray();
+            if (empty($assignedClassIds)) {
+                return back()->with('error', 'ليس لديك فصول مسندة لإنشاء اختبار لها.');
+            }
+            $rules['class_id'] = 'required|in:' . implode(',', $assignedClassIds);
+        } else {
+            $rules['class_id'] = 'nullable|exists:classes,id';
+        }
+
+        $request->validate($rules, [
+            'class_id.required' => 'يرجى تحديد الفصل الدراسي الخاص بك.',
+            'class_id.in' => 'غير مصرح لك بإنشاء اختبار لفصل غير مسند لخدمتك.',
         ]);
 
         $quiz = Quiz::create([
@@ -68,21 +100,24 @@ class QuizController extends Controller
             'duration_minutes' => $request->duration_minutes,
             'passing_score' => $request->passing_score,
             'total_marks' => 0,
-            'created_by' => Auth::id(),
+            'created_by' => $user->id,
             'is_published' => true,
         ]);
 
-        return redirect()->route('quizzes.edit', $quiz->id)->with('success', 'تم إنشاء الاختبار للفصل. يمكنك الآن إضافة الأسئلة.');
+        return redirect()->route('quizzes.edit', $quiz->id)->with('success', 'تم إنشاء الاختبار بنجاح. يمكنك الآن إضافة الأسئلة وتحديد الدرجات.');
     }
 
     public function edit(Quiz $quiz)
     {
-        $quiz->load('questions');
+        $this->authorizeQuizManagement($quiz);
+        $quiz->load(['questions', 'schoolClass.grade', 'lesson']);
         return view('quizzes.builder', compact('quiz'));
     }
 
     public function storeQuestion(Request $request, Quiz $quiz)
     {
+        $this->authorizeQuizManagement($quiz);
+
         $request->validate([
             'question_text' => 'required|string',
             'question_type' => 'required|in:multiple_choice,true_false,short_answer',
@@ -114,6 +149,10 @@ class QuizController extends Controller
     public function destroyQuestion(Question $question)
     {
         $quiz = $question->quiz;
+        if ($quiz) {
+            $this->authorizeQuizManagement($quiz);
+        }
+        
         $question->delete();
         if ($quiz) {
             $quiz->update(['total_marks' => $quiz->questions()->sum('marks')]);
@@ -130,6 +169,12 @@ class QuizController extends Controller
         }
 
         $student = StudentProfile::where('user_id', $user->id)->firstOrFail();
+        
+        // Ensure student can only take quiz assigned to their class (or general)
+        if ($quiz->class_id && $quiz->class_id !== $student->class_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الاختبار مخصص لفصل آخر.');
+        }
+
         $previousAttempt = QuizAttempt::where('quiz_id', $quiz->id)->where('student_id', $student->id)->first();
 
         return view('quizzes.take', compact('quiz', 'previousAttempt'));
@@ -139,6 +184,11 @@ class QuizController extends Controller
     {
         $user = Auth::user();
         $student = StudentProfile::where('user_id', $user->id)->firstOrFail();
+        
+        if ($quiz->class_id && $quiz->class_id !== $student->class_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الاختبار مخصص لفصل آخر.');
+        }
+
         $quiz->load('questions');
 
         $userAnswers = $request->input('answers', []);
@@ -194,5 +244,22 @@ class QuizController extends Controller
     {
         $attempt->load(['quiz.questions', 'student.user']);
         return view('quizzes.result', compact('attempt'));
+    }
+
+    private function authorizeQuizManagement(Quiz $quiz): void
+    {
+        $user = Auth::user();
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->assignedClasses->pluck('id')->toArray();
+            if ($quiz->created_by === $user->id || ($quiz->class_id && in_array($quiz->class_id, $assignedClassIds))) {
+                return;
+            }
+        }
+
+        abort(403, 'غير مصرح لك بإدارة هذا الاختبار.');
     }
 }

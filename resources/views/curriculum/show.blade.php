@@ -11,8 +11,8 @@
 </div>
 
 <div class="grid grid-cols-3">
-    <!-- Left Column: Add Units & Lessons (For Admin) -->
-    @if(Auth::user()->isAdmin())
+    <!-- Left Column: Add Units & Lessons (For Admin & Grade Servant) -->
+    @if($canManageCurriculum)
     <div class="card">
         <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;"><i class="fas fa-plus-circle"></i> إضافة وحدة دراسية جديدة</h3>
         <form action="{{ route('curriculum.units.store', $curriculum->id) }}" method="POST">
@@ -34,10 +34,10 @@
     @endif
 
     <!-- Units and Lessons Tree -->
-    <div style="grid-column: {{ Auth::user()->isAdmin() ? 'span 2' : 'span 3' }};">
+    <div style="grid-column: {{ $canManageCurriculum ? 'span 2' : 'span 3' }};">
         @forelse($curriculum->units as $unit)
             <div class="card" style="margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                     <div>
                         <span class="badge badge-warning">ترم {{ $unit->term }}</span>
                         <h3 style="font-size: 18px; font-weight: 800; display: inline-block; margin-right: 8px;">{{ $unit->title }}</h3>
@@ -47,27 +47,31 @@
                 <!-- Lessons inside this unit -->
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     @forelse($unit->lessons as $lesson)
-                        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div>
                                 <div style="font-weight: 700; font-size: 15px; color: var(--primary-dark);">
                                     <i class="fas fa-book-open" style="color: var(--primary-light); margin-left: 8px;"></i>
                                     {{ $lesson->title }}
                                 </div>
-                                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                    آية الدرس: {{ $lesson->bible_verse }}
-                                </div>
+                                @if($lesson->bible_verse)
+                                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                        آية الدرس: {{ $lesson->bible_verse }}
+                                    </div>
+                                @endif
                             </div>
-                            <a href="{{ route('lessons.show', $lesson->id) }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-eye"></i> قراءة الدرس
-                            </a>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ route('lessons.show', $lesson->id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> قراءة الدرس
+                                </a>
+                            </div>
                         </div>
                     @empty
                         <div style="color: var(--text-muted); font-size: 13px;">لا يوجد دروس في هذه الوحدة بعد.</div>
                     @endforelse
                 </div>
 
-                <!-- Add Lesson Form inside unit (for admin) -->
-                @if(Auth::user()->isAdmin())
+                <!-- Add Lesson Form inside unit (for admin & servant) -->
+                @if($canManageCurriculum)
                     <hr style="margin: 20px 0; border-top: 1px solid var(--border-color);">
                     <form action="{{ route('units.lessons.store', $unit->id) }}" method="POST" style="background: #fffdf5; padding: 16px; border-radius: var(--radius-sm); border: 1px dashed var(--accent);">
                         @csrf

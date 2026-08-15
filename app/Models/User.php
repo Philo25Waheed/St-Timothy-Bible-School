@@ -29,16 +29,13 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'is_active' => 'boolean',
-            'birth_date' => 'date',
-            'pending_children_info' => 'array',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_active' => 'boolean',
+        'birth_date' => 'date',
+        'pending_children_info' => 'array',
+    ];
 
     public function isAdmin(): bool
     {

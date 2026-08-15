@@ -67,7 +67,8 @@ composer install
 cp .env.example .env
 php artisan key:generate
 
-# 3. تشغيل الهجرة والبيانات الأولية (Database Seeders)
+# 3. إنشاء قاعدة البيانات في MySQL وتشغيل الهجرة والبيانات الأولية (Database Seeders)
+# (تأكد من تشغيل خادم MySQL وإجراء: CREATE DATABASE bible_school;)
 php artisan migrate:fresh --seed
 
 # 4. إنتاج رابط التخزين

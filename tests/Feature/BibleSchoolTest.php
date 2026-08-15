@@ -4,6 +4,12 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Models\User;
+use App\Models\SchoolClass;
+use App\Models\Curriculum;
+use App\Models\Unit;
+use App\Models\Lesson;
+use App\Models\Quiz;
+use App\Models\Grade;
 
 class BibleSchoolTest extends TestCase
 {
@@ -87,7 +93,7 @@ class BibleSchoolTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('المناهج والدروس');
 
-        $curriculum = \App\Models\Curriculum::first();
+        $curriculum = Curriculum::first();
         if ($curriculum) {
             $showResponse = $this->actingAs($student)->get('/curriculum/' . $curriculum->id);
             $showResponse->assertStatus(200);
@@ -179,7 +185,7 @@ class BibleSchoolTest extends TestCase
     {
         $admin = User::where('role', 'admin')->first();
         $servant = User::where('role', 'servant')->first();
-        $class = \App\Models\SchoolClass::first();
+        $class = SchoolClass::first();
 
         $response = $this->actingAs($admin)->post('/academic/classes/' . $class->id, [
             'servant_id' => $servant->id,
@@ -190,6 +196,84 @@ class BibleSchoolTest extends TestCase
         $this->assertDatabaseHas('classes', [
             'id' => $class->id,
             'servant_id' => $servant->id,
+        ]);
+    }
+
+    public function test_servant_can_create_quiz_for_their_assigned_class(): void
+    {
+        $servant = User::where('role', 'servant')->first();
+        $class = SchoolClass::first();
+        
+        // Ensure servant is assigned to class
+        $servant->assignedClasses()->sync([$class->id]);
+
+        $response = $this->actingAs($servant)->post('/quizzes', [
+            'title' => 'اختبار مخصص لفصل الخادم',
+            'class_id' => $class->id,
+            'duration_minutes' => 20,
+            'passing_score' => 60,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('quizzes', [
+            'title' => 'اختبار مخصص لفصل الخادم',
+            'class_id' => $class->id,
+            'created_by' => $servant->id,
+        ]);
+    }
+
+    public function test_servant_cannot_create_quiz_for_unassigned_class(): void
+    {
+        $servant = User::where('role', 'servant')->first();
+        $class1 = SchoolClass::first();
+        $class2 = SchoolClass::skip(1)->first();
+
+        if ($class2) {
+            // Assign servant only to class1
+            $servant->assignedClasses()->sync([$class1->id]);
+
+            $response = $this->actingAs($servant)->post('/quizzes', [
+                'title' => 'محاولة إنشاء اختبار لفصل آخر',
+                'class_id' => $class2->id,
+                'duration_minutes' => 15,
+                'passing_score' => 50,
+            ]);
+
+            $response->assertSessionHasErrors('class_id');
+        }
+    }
+
+    public function test_servant_can_add_lesson_to_assigned_curriculum_grade(): void
+    {
+        $servant = User::where('role', 'servant')->first();
+        $class = SchoolClass::with('grade')->first();
+        $servant->assignedClasses()->sync([$class->id]);
+
+        // Find or create curriculum matching the servant's class grade
+        $curriculum = Curriculum::where('grade_id', $class->grade_id)->first();
+        if (!$curriculum) {
+            $curriculum = Curriculum::create([
+                'title' => 'منهج المرحلة',
+                'grade_id' => $class->grade_id,
+                'stage_id' => $class->grade->stage_id,
+            ]);
+        }
+
+        $unit = $curriculum->units()->create([
+            'title' => 'الوحدة الأولى',
+            'term' => 1,
+        ]);
+
+        $response = $this->actingAs($servant)->post('/units/' . $unit->id . '/lessons', [
+            'title' => 'درس جديد من الخادم لفصله',
+            'bible_verse' => 'يو 3: 16',
+            'content' => 'محتوى الدرس التدريبي للخدمة',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('lessons', [
+            'unit_id' => $unit->id,
+            'title' => 'درس جديد من الخادم لفصله',
         ]);
     }
 }

@@ -45,8 +45,8 @@
 </div>
 
 <div class="row g-4" style="min-height: 600px;">
-    <!-- Conversations Sidebar (WhatsApp Style Sorting) -->
-    <div class="col-lg-4">
+    <!-- Conversations Sidebar (Hidden on mobile if conversation is active) -->
+    <div class="col-lg-4 @if($activeContact) d-none d-lg-block @endif">
         <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
             <div class="d-flex align-items-center justify-content-between mb-3 px-2">
                 <h6 class="fw-bold text-dark mb-0">
@@ -68,7 +68,7 @@
                        class="p-3 rounded-4 border text-decoration-none transition-all d-flex align-items-center justify-content-between gap-3 @if($isActive) bg-primary bg-opacity-10 border-primary @else bg-white border-light hover-bg-light @endif">
                         
                         <div class="d-flex align-items-center gap-3 overflow-hidden">
-                            <div class="position-relative">
+                            <div class="position-relative flex-shrink-0">
                                 <img src="{{ $contact->avatar_url }}" class="rounded-circle border border-2 border-white shadow-sm" width="46" height="46" alt="Avatar">
                                 @if($unread > 0)
                                     <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
@@ -115,17 +115,20 @@
         </div>
     </div>
 
-    <!-- Active Chat Box Stream -->
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm rounded-4 h-100 p-4 d-flex flex-column justify-content-between">
+    <!-- Active Chat Box Stream (Hidden on mobile if no active conversation) -->
+    <div class="col-lg-8 @if(!$activeContact) d-none d-lg-block @endif">
+        <div class="card border-0 shadow-sm rounded-4 h-100 p-3 p-md-4 d-flex flex-column justify-content-between">
             @if($activeContact)
                 <div>
                     <!-- Chat Active Header -->
                     <div class="d-flex align-items-center justify-content-between border-bottom pb-3 mb-3">
                         <div class="d-flex align-items-center gap-3">
-                            <img src="{{ $activeContact->avatar_url }}" class="rounded-circle border border-2 border-primary" width="50" height="50" alt="Avatar">
+                            <a href="{{ route('messages.index') }}" class="btn btn-outline-secondary btn-sm d-lg-none rounded-3 px-2" title="العودة للمحادثات">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <img src="{{ $activeContact->avatar_url }}" class="rounded-circle border border-2 border-primary flex-shrink-0" width="46" height="46" alt="Avatar">
                             <div>
-                                <h5 class="fw-bold text-dark mb-0">{{ $activeContact->name }}</h5>
+                                <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">{{ $activeContact->name }}</h5>
                                 <small class="text-muted">
                                     <i class="bi bi-shield-check text-success me-1"></i>
                                     @switch($activeContact->role)
@@ -140,12 +143,12 @@
                     </div>
 
                     <!-- Messages Stream Container -->
-                    <div class="d-flex flex-column gap-3 p-2 overflow-y-auto" style="max-height: 400px; min-height: 340px;">
+                    <div class="d-flex flex-column gap-3 p-2 overflow-y-auto" style="max-height: 420px; min-height: 320px;">
                         @forelse($messages as $msg)
                             @php $isMe = ($msg->sender_id == Auth::id()); @endphp
                             <div class="d-flex flex-column align-items-{{ $isMe ? 'end' : 'start' }}">
-                                <div class="p-3 rounded-4 max-w-75 shadow-sm @if($isMe) bg-primary text-white rounded-bottom-end-0 @else bg-light text-dark border rounded-bottom-start-0 @endif" style="max-width: 75%;">
-                                    <div class="mb-1" style="white-space: pre-line;">{{ $msg->message }}</div>
+                                <div class="p-3 rounded-4 shadow-sm @if($isMe) bg-primary text-white rounded-bottom-end-0 @else bg-light text-dark border rounded-bottom-start-0 @endif" style="max-width: 85%;">
+                                    <div class="mb-1" style="white-space: pre-line; word-break: break-word;">{{ $msg->message }}</div>
                                     <div class="d-flex align-items-center justify-content-end gap-1 opacity-75 fs-7">
                                         <span>{{ $msg->created_at->format('h:i A') }}</span>
                                         @if($isMe)
@@ -170,8 +173,8 @@
                     <input type="hidden" name="receiver_id" value="{{ $activeContact->id }}">
                     <div class="input-group">
                         <input type="text" name="message" class="form-control form-control-lg rounded-start-4 rounded-0 border-end-0" placeholder="اكتب رسالتك لـ {{ $activeContact->name }}..." required autofocus>
-                        <button type="submit" class="btn btn-primary btn-lg rounded-end-4 px-4 fw-bold">
-                            <i class="bi bi-send-fill me-1"></i> إرسال
+                        <button type="submit" class="btn btn-primary btn-lg rounded-end-4 px-3 px-md-4 fw-bold">
+                            <i class="bi bi-send-fill me-1"></i> <span class="d-none d-sm-inline">إرسال</span>
                         </button>
                     </div>
                 </form>

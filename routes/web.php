@@ -83,6 +83,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/events', [EventController::class, 'index'])->name('events.index');
     Route::get('/verses', [VerseController::class, 'index'])->name('verses.index');
 
+    // Curriculum Browser for all authenticated users
+    Route::get('/curriculum', [CurriculumController::class, 'index'])->name('curriculum.index');
+
     // Servant & Admin Routes
     Route::middleware('role:admin,servant')->group(function () {
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
@@ -99,7 +102,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/achievements/award', [AchievementController::class, 'award'])->name('achievements.award');
         Route::post('/verses/progress', [VerseController::class, 'updateProgress'])->name('verses.progress');
 
-        // Quiz Builder
+        // Quiz Management
         Route::get('/quizzes', [QuizController::class, 'index'])->name('quizzes.index');
         Route::get('/quizzes/create', [QuizController::class, 'create'])->name('quizzes.create');
         Route::post('/quizzes', [QuizController::class, 'store'])->name('quizzes.store');
@@ -114,16 +117,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/exams/{exam}/builder', [ExamController::class, 'edit'])->name('exams.edit');
         Route::post('/exams/{exam}/questions', [ExamController::class, 'storeQuestion'])->name('exams.questions.store');
 
+        // Curriculum Units & Lessons Management (Admin & Servant)
+        Route::post('/curriculum/{curriculum}/units', [CurriculumController::class, 'storeUnit'])->name('curriculum.units.store');
+        Route::post('/units/{unit}/lessons', [CurriculumController::class, 'storeLesson'])->name('units.lessons.store');
+
         // News & Events creation
         Route::get('/news/create', [NewsController::class, 'create'])->name('news.create');
         Route::post('/news', [NewsController::class, 'store'])->name('news.store');
         Route::get('/events/create', [EventController::class, 'create'])->name('events.create');
         Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::post('/verses', [VerseController::class, 'store'])->name('verses.store');
-    } );
-
-    // Public / View-only Curriculum Routes for all authenticated users
-    Route::get('/curriculum', [CurriculumController::class, 'index'])->name('curriculum.index');
+    });
 
     // Admin Only Routes
     Route::middleware('role:admin')->group(function () {
@@ -145,8 +149,6 @@ Route::middleware('auth')->group(function () {
         // Curriculum Creation & Modification (Admin Only)
         Route::get('/curriculum/create', [CurriculumController::class, 'create'])->name('curriculum.create');
         Route::post('/curriculum', [CurriculumController::class, 'store'])->name('curriculum.store');
-        Route::post('/curriculum/{curriculum}/units', [CurriculumController::class, 'storeUnit'])->name('curriculum.units.store');
-        Route::post('/units/{unit}/lessons', [CurriculumController::class, 'storeLesson'])->name('units.lessons.store');
 
         // Achievements
         Route::get('/achievements', [AchievementController::class, 'index'])->name('achievements.index');

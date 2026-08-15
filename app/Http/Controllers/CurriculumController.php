@@ -17,7 +17,27 @@ class CurriculumController extends Controller
 {
     public function index()
     {
-        $curricula = Curriculum::with(['stage', 'grade', 'units.lessons'])->get();
+        $user = Auth::user();
+        $query = Curriculum::with(['stage', 'grade', 'units.lessons']);
+
+        if ($user && $user->isStudent()) {
+            $student = StudentProfile::where('user_id', $user->id)->first();
+            if ($student && $student->grade_id) {
+                $query->where('grade_id', $student->grade_id);
+            } elseif ($student && $student->stage_id) {
+                $query->where('stage_id', $student->stage_id);
+            }
+        } elseif ($user && $user->isServant()) {
+            $assignedGradeIds = $user->assignedClasses->pluck('grade_id')->filter()->unique()->toArray();
+            if (!empty($assignedGradeIds)) {
+                $query->where(function($q) use ($assignedGradeIds) {
+                    $q->whereIn('grade_id', $assignedGradeIds)
+                      ->orWhere('is_published', true);
+                });
+            }
+        }
+
+        $curricula = $query->get();
         return view('curriculum.index', compact('curricula'));
     }
 
@@ -42,20 +62,42 @@ class CurriculumController extends Controller
     public function show(Curriculum $curriculum)
     {
         $curriculum->load('units.lessons.quizzes');
-        return view('curriculum.show', compact('curriculum'));
+        $user = Auth::user();
+        $canManageCurriculum = $this->canUserManageCurriculum($user, $curriculum);
+
+        return view('curriculum.show', compact('curriculum', 'canManageCurriculum'));
     }
 
     public function storeUnit(Request $request, Curriculum $curriculum)
     {
-        $request->validate(['title' => 'required|string']);
+        $user = Auth::user();
+        if (!$this->canUserManageCurriculum($user, $curriculum)) {
+            abort(403, 'غير مصرح لك بإضافة وحدات لهذا المنهج.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'term' => 'required|in:1,2',
+            'description' => 'nullable|string',
+        ]);
+
         $curriculum->units()->create($request->only('title', 'term', 'description', 'order'));
-        return back()->with('success', 'تم إضافة الوحدة بنجاح.');
+        return back()->with('success', 'تم إضافة الوحدة الدراسية بنجاح.');
     }
 
     public function storeLesson(Request $request, Unit $unit)
     {
+        $user = Auth::user();
+        $curriculum = $unit->curriculum;
+        
+        if (!$this->canUserManageCurriculum($user, $curriculum)) {
+            abort(403, 'غير مصرح لك بنشر دروس في هذا المنهج.');
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
+            'bible_verse' => 'nullable|string|max:255',
+            'memory_verse' => 'nullable|string',
             'content' => 'nullable|string',
         ]);
 
@@ -64,12 +106,12 @@ class CurriculumController extends Controller
             'memory_verse', 'video_url', 'order', 'status'
         ));
 
-        return back()->with('success', 'تم إضافة الدرس بنجاح.');
+        return back()->with('success', 'تم نشر الدرس بنجاح للطلاب.');
     }
 
     public function showLesson(Lesson $lesson)
     {
-        $lesson->load(['unit.curriculum', 'quizzes']);
+        $lesson->load(['unit.curriculum', 'quizzes.schoolClass']);
         $user = Auth::user();
         $isCompleted = false;
 
@@ -98,5 +140,25 @@ class CurriculumController extends Controller
         );
 
         return back()->with('success', 'مبروك! تم إنهاء الدرس بنجاح. 🎉');
+    }
+
+    private function canUserManageCurriculum($user, Curriculum $curriculum): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isServant()) {
+            $assignedGradeIds = $user->assignedClasses->pluck('grade_id')->filter()->unique()->toArray();
+            if ($curriculum->grade_id && in_array($curriculum->grade_id, $assignedGradeIds)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

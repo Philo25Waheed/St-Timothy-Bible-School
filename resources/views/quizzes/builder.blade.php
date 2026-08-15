@@ -5,7 +5,11 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">منشئ أسئلة الاختبار: {{ $quiz->title }}</h1>
-        <p class="page-subtitle">إجمالي الدرجات: <strong>{{ $quiz->total_marks }}</strong> | عدد الأسئلة: <strong>{{ $quiz->questions->count() }}</strong></p>
+        <p class="page-subtitle">
+            الفصل: <strong>{{ $quiz->schoolClass ? $quiz->schoolClass->name : 'متاح للجميع' }}</strong> | 
+            إجمالي الدرجات: <strong>{{ $quiz->total_marks }}</strong> | 
+            عدد الأسئلة: <strong>{{ $quiz->questions->count() }}</strong>
+        </p>
     </div>
     <a href="{{ route('quizzes.index') }}" class="btn btn-outline"><i class="fas fa-check"></i> إنهاء وحفظ</a>
 </div>
@@ -44,18 +48,20 @@
                 <label class="form-label">تفسير الإجابة (اختياري)</label>
                 <input type="text" name="explanation" class="form-control">
             </div>
-            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center;"><i class="fas fa-plus"></i> إضافة السؤال للاختبار</button>
+            <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center; padding: 10px;">
+                <i class="fas fa-plus"></i> إضافة السؤال للاختبار
+            </button>
         </form>
     </div>
 
     <!-- Questions List -->
-    <div style="grid-column: span 2;">
+    <div style="grid-column: span 2;" class="questions-list-container">
         <div class="card">
             <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;"><i class="fas fa-list-check"></i> أسئلة الاختبار الحالية</h3>
             @forelse($quiz->questions as $index => $q)
                 <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 16px; border-radius: var(--radius-sm); margin-bottom: 12px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
                             <span class="badge badge-info" style="margin-bottom: 6px;">سؤال {{ $index + 1 }} ({{ $q->marks }} درجات)</span>
                             <div style="font-weight: 800; font-size: 15px; color: var(--primary-dark);">{{ $q->question_text }}</div>
                             @if($q->options)
@@ -66,12 +72,14 @@
                         <form action="{{ route('questions.destroy', $q->id) }}" method="POST">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('هل أنت متأكد من حذف هذا السؤال؟')">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </form>
                     </div>
                 </div>
             @empty
-                <div style="text-align: center; color: var(--text-muted); padding: 40px;">لم يتم إضافة أسئلة بعد. أضف أسئلة باستخدام النموذج الجانبي.</div>
+                <div style="text-align: center; color: var(--text-muted); padding: 40px;">لم يتم إضافة أسئلة بعد. أضف أسئلة باستخدام النموذج.</div>
             @endforelse
         </div>
     </div>

@@ -26,6 +26,7 @@
     @stack('styles')
 </head>
 <body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
@@ -37,6 +38,9 @@
                     <div class="brand-name" style="font-size: 15px; font-weight: 800;">مدرسة القديس تيموثاوس للكتاب المقدس</div>
                     <div style="font-size: 11px; color: var(--accent-gold);">Faith • Knowledge • Spirit</div>
                 </div>
+                <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="إغلاق القائمة">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
             <div class="sidebar-menu">
@@ -111,6 +115,10 @@
 
                 @if(Auth::user()->isServant())
                     <div class="sidebar-label">الخدمة وفصلي</div>
+                    <a href="{{ route('curriculum.index') }}" class="sidebar-item {{ request()->routeIs('curriculum.*') || request()->routeIs('lessons.*') ? 'active' : '' }}">
+                        <i class="fas fa-book-open"></i>
+                        <span>المناهج والدروس</span>
+                    </a>
                     <a href="{{ route('attendance.index') }}" class="sidebar-item {{ request()->routeIs('attendance.index') ? 'active' : '' }}">
                         <i class="fas fa-clipboard-user"></i>
                         <span>تسجيل الحضور اليومي</span>
@@ -192,6 +200,10 @@
             <!-- Top Navbar -->
             <header class="topbar">
                 <div class="topbar-right d-flex align-items-center gap-3">
+                    <button type="button" class="mobile-sidebar-toggle" id="sidebarToggle" aria-label="فتح القائمة الجانبية">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
                     <a href="{{ route('messages.index') }}" style="position: relative; font-size: 18px; color: var(--text-muted);" title="الرسائل المباشرة">
                         <i class="bi bi-chat-dots-fill"></i>
                         @if($unreadMessagesBadge > 0)
@@ -295,6 +307,31 @@
             <span>حسابي</span>
         </a>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const closeBtn = document.getElementById('sidebarCloseBtn');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const sidebar = document.querySelector('.sidebar');
+
+            function openSidebar() {
+                if (sidebar) sidebar.classList.add('show');
+                if (backdrop) backdrop.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebar) sidebar.classList.remove('show');
+                if (backdrop) backdrop.classList.remove('show');
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if (backdrop) backdrop.addEventListener('click', closeSidebar);
+        });
+    </script>
 
     @stack('scripts')
 </body>
