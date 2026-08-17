@@ -62,13 +62,11 @@ FILESYSTEM_DISK=local
 تأكد من وجود ملف `.htaccess` في المجلد الرئيسي للمشروع (بجانب مجلدات `app` و `vendor` و `public`):
 
 ```apache
-RewriteEngine On
-
-# تحويل روابط التخزين والصور المرفوعة تلقائياً
-RewriteRule ^storage/(.*)$ /storage/app/public/$1 [END]
-
-# تحويل كل الطلبات الأخرى إلى مجلد public
-RewriteRule (.*) /public/$1 [L]
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
 ```
 
 ---
