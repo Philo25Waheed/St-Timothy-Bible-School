@@ -15,7 +15,8 @@ class AttendanceController extends Controller
     {
         $user = Auth::user();
         if ($user->isServant()) {
-            $classes = SchoolClass::where('servant_id', $user->id)->get();
+            $assignedClassIds = $user->servant_class_ids;
+            $classes = SchoolClass::whereIn('id', $assignedClassIds)->get();
         } else {
             $classes = SchoolClass::all();
         }
@@ -45,11 +46,26 @@ class AttendanceController extends Controller
             'attendance' => 'required|array',
         ]);
 
+        $user = Auth::user();
         $classId = $request->class_id;
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->servant_class_ids;
+
+            if (!in_array($classId, $assignedClassIds)) {
+                abort(403, 'غير مصرح لك بتسجيل الحضور لفصل غير مسند لخدمتك.');
+            }
+        }
+
         $date = $request->date;
-        $recorderId = Auth::id();
+        $recorderId = $user->id;
+        $validStudentIds = StudentProfile::where('class_id', $classId)->pluck('id')->toArray();
 
         foreach ($request->attendance as $studentId => $status) {
+            if (!in_array($studentId, $validStudentIds)) {
+                continue; // Skip any student ID not actually enrolled in this class
+            }
+
             AttendanceRecord::updateOrCreate(
                 [
                     'class_id' => $classId,
@@ -74,7 +90,8 @@ class AttendanceController extends Controller
     {
         $user = Auth::user();
         if ($user->isServant()) {
-            $classes = SchoolClass::where('servant_id', $user->id)->get();
+            $assignedClassIds = $user->servant_class_ids;
+            $classes = SchoolClass::whereIn('id', $assignedClassIds)->get();
         } else {
             $classes = SchoolClass::all();
         }
@@ -93,7 +110,8 @@ class AttendanceController extends Controller
 
         $code = trim($request->code);
         $date = Carbon::today()->toDateString();
-        $recorderId = Auth::id();
+        $user = Auth::user();
+        $recorderId = $user->id;
 
         // Match student profile by code or ID
         $student = StudentProfile::where('code', $code)
@@ -106,6 +124,19 @@ class AttendanceController extends Controller
                 'success' => false,
                 'message' => 'لم يتم العثور على طالب بهذا الكود: ' . $code,
             ], 404);
+        }
+
+        // Check servant class authorization
+        if ($user->isServant()) {
+            $assignedClassIds = $user->servant_class_ids;
+
+            $isAllowed = in_array($student->class_id, $assignedClassIds) || $student->servant_id === $user->id;
+            if (!$isAllowed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'غير مصرح لك بتسجيل حضور طالب غير مسجل بفصول خدمتك.',
+                ], 403);
+            }
         }
 
         // Record attendance as present

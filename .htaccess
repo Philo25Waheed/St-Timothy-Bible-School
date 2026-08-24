@@ -1,6 +1,21 @@
+# Disable Directory Browsing
+Options -Indexes
+
+# Block sensitive files directly
+<FilesMatch "^(\.env|\.git|\.editorconfig|composer\.(json|lock)|package(-lock)?\.json|\.phpunit.*|.*\.sql|env_.*\.txt)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    
+    # Block hidden/sensitive files and directories
+    RewriteRule ^(\.env|\.git|composer\.(json|lock)|package(-lock)?\.json|.*\.sql) - [F,L,NC]
+    
+    # Forward everything else to public directory
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
+
 

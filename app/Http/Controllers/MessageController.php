@@ -48,12 +48,10 @@ class MessageController extends Controller
 
         } elseif ($user->isServant()) {
             // Servant can message: Class students, their parents, & Admin(s)
-            $classIdsPivot = $user->assignedClasses()->pluck('classes.id');
-            $classIdsDirect = SchoolClass::where('servant_id', $user->id)->pluck('id');
-            $classIds = $classIdsPivot->merge($classIdsDirect)->unique()->filter();
+            $classIds = $user->servant_class_ids;
 
             $studentProfiles = StudentProfile::where(function($q) use ($classIds, $user) {
-                if ($classIds->isNotEmpty()) {
+                if (!empty($classIds)) {
                     $q->whereIn('class_id', $classIds);
                 }
                 $q->orWhere('servant_id', $user->id);
@@ -198,12 +196,10 @@ class MessageController extends Controller
             }
 
         } elseif ($sender->isServant()) {
-            $classIdsPivot = $sender->assignedClasses()->pluck('classes.id');
-            $classIdsDirect = SchoolClass::where('servant_id', $sender->id)->pluck('id');
-            $classIds = $classIdsPivot->merge($classIdsDirect)->unique()->filter();
+            $classIds = $sender->servant_class_ids;
 
             $studentProfiles = StudentProfile::where(function($q) use ($classIds, $sender) {
-                if ($classIds->isNotEmpty()) {
+                if (!empty($classIds)) {
                     $q->whereIn('class_id', $classIds);
                 }
                 $q->orWhere('servant_id', $sender->id);
@@ -234,10 +230,35 @@ class MessageController extends Controller
             }
         }
 
+        // Determine safe student_id based on role
+        $studentId = null;
+        if ($sender->isStudent()) {
+            $studentId = $sender->studentProfile?->id;
+        } elseif ($sender->isParent()) {
+            if ($request->filled('student_id')) {
+                $child = StudentProfile::where('parent_id', $sender->id)->where('id', $request->student_id)->first();
+                $studentId = $child?->id;
+            } else {
+                $studentId = StudentProfile::where('parent_id', $sender->id)->first()?->id;
+            }
+        } elseif ($sender->isServant() && $request->filled('student_id')) {
+            $isAssignedStudent = StudentProfile::where('id', $request->student_id)
+                ->where(function($q) use ($sender) {
+                    $classIds = $sender->servant_class_ids;
+                    if (!empty($classIds)) {
+                        $q->whereIn('class_id', $classIds);
+                    }
+                    $q->orWhere('servant_id', $sender->id);
+                })->exists();
+            $studentId = $isAssignedStudent ? $request->student_id : null;
+        } elseif ($sender->isAdmin()) {
+            $studentId = $request->student_id;
+        }
+
         Message::create([
             'sender_id' => $sender->id,
             'receiver_id' => $receiver->id,
-            'student_id' => $request->student_id,
+            'student_id' => $studentId,
             'message' => $request->message,
             'is_read' => false,
         ]);

@@ -37,8 +37,13 @@ class EventController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'event_type' => 'required|string',
+            'event_type' => 'required|string|max:50',
             'start_time' => 'required|date',
+            'end_time' => 'nullable|date|after_or_equal:start_time',
+            'location' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'stage_id' => 'nullable|exists:stages,id',
+            'class_id' => 'nullable|exists:classes,id',
         ]);
 
         Event::create($request->only(
@@ -54,6 +59,10 @@ class EventController extends Controller
      */
     public function register(Request $request, Event $event)
     {
+        $request->validate([
+            'notes' => 'nullable|string|max:255',
+        ]);
+
         $user = Auth::user();
         $student = $user->studentProfile;
 
@@ -105,8 +114,10 @@ class EventController extends Controller
         $request->validate([
             'event_id' => 'required|exists:events,id',
             'title' => 'required|string|max:255',
-            'image_url' => 'required|url',
-            'caption' => 'nullable|string',
+            'image_url' => 'required|url|regex:/^https:\/\/.+/i',
+            'caption' => 'nullable|string|max:500',
+        ], [
+            'image_url.regex' => 'رابط الصورة يجب أن يبدأ ببروتوكول آمن (HTTPS).',
         ]);
 
         EventPhoto::create([

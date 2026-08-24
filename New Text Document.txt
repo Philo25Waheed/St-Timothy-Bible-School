@@ -46,3 +46,6 @@ MAIL_PASSWORD=null
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS="info@timothy-bible-school.page.gd"
 MAIL_FROM_NAME="${APP_NAME}"
+
+pass : MrZAyeB6Wl7tvI
+timothy-bible-school

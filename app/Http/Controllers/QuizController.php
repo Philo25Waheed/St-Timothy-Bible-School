@@ -32,7 +32,7 @@ class QuizController extends Controller
                 $query->whereNull('class_id');
             }
         } elseif ($user->isServant()) {
-            $classIds = $user->assignedClasses->pluck('id')->toArray();
+            $classIds = $user->servant_class_ids;
             $query->where(function($q) use ($user, $classIds) {
                 $q->whereIn('class_id', $classIds)
                   ->orWhere('created_by', $user->id);
@@ -48,7 +48,7 @@ class QuizController extends Controller
         $user = Auth::user();
         
         if ($user->isServant()) {
-            $classes = $user->assignedClasses()->with('grade')->get();
+            $classes = $user->servant_classes;
             if ($classes->isEmpty()) {
                 return redirect()->route('quizzes.index')->with('error', 'لم يتم إسناد أي فصل لك بعد لإنشاء اختبارات له. تواصل مع إدارة المدرسة.');
             }
@@ -78,7 +78,7 @@ class QuizController extends Controller
         ];
 
         if ($user->isServant()) {
-            $assignedClassIds = $user->assignedClasses->pluck('id')->toArray();
+            $assignedClassIds = $user->servant_class_ids;
             if (empty($assignedClassIds)) {
                 return back()->with('error', 'ليس لديك فصول مسندة لإنشاء اختبار لها.');
             }
@@ -242,7 +242,33 @@ class QuizController extends Controller
 
     public function result(QuizAttempt $attempt)
     {
-        $attempt->load(['quiz.questions', 'student.user']);
+        $attempt->load(['quiz.questions', 'student.user', 'student.schoolClass']);
+        $user = Auth::user();
+
+        // Strict Authorization: Student, Parent of student, Servant of student's class / quiz creator, or Admin
+        $isAuthorized = false;
+
+        if ($user->isAdmin()) {
+            $isAuthorized = true;
+        } elseif ($user->isStudent() && $attempt->student && $attempt->student->user_id === $user->id) {
+            $isAuthorized = true;
+        } elseif ($user->isParent() && $attempt->student && $attempt->student->parent_id === $user->id) {
+            $isAuthorized = true;
+        } elseif ($user->isServant()) {
+            $servantClassIds = $user->servant_class_ids;
+            if ($attempt->student && (
+                $attempt->student->servant_id === $user->id ||
+                in_array($attempt->student->class_id, $servantClassIds) ||
+                $attempt->quiz->created_by === $user->id
+            )) {
+                $isAuthorized = true;
+            }
+        }
+
+        if (!$isAuthorized) {
+            abort(403, 'غير مصرح لك بالاطلاع على نتيجة هذا الاختبار.');
+        }
+
         return view('quizzes.result', compact('attempt'));
     }
 
@@ -254,7 +280,7 @@ class QuizController extends Controller
         }
 
         if ($user->isServant()) {
-            $assignedClassIds = $user->assignedClasses->pluck('id')->toArray();
+            $assignedClassIds = $user->servant_class_ids;
             if ($quiz->created_by === $user->id || ($quiz->class_id && in_array($quiz->class_id, $assignedClassIds))) {
                 return;
             }

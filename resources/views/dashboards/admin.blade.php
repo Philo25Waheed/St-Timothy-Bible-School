@@ -7,9 +7,10 @@
         <h1 class="page-title">مرحبًا بك في لوحة التحكم 👋</h1>
         <p class="page-subtitle">نظرة عامة على إحصائيات وأداء مدرسة الكتاب المقدس</p>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <a href="{{ route('students.create') }}" class="btn btn-primary btn-sm"><i class="fas fa-user-plus"></i> إضافة طالب</a>
         <a href="{{ route('servants.create') }}" class="btn btn-accent btn-sm"><i class="fas fa-user-tie"></i> إضافة خادم</a>
+        <a href="{{ route('admins.create') }}" class="btn btn-outline btn-sm"><i class="fas fa-user-shield"></i> إضافة مسئول</a>
         <a href="{{ route('quizzes.create') }}" class="btn btn-outline btn-sm"><i class="fas fa-plus"></i> إنشاء اختبار</a>
     </div>
 </div>
@@ -122,10 +123,10 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(document.getElementById('attendanceChart'), {
         type: 'line',
         data: {
-            labels: {!! json_encode($attendanceChart['labels']) !!},
+            labels: @json($attendanceChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
             datasets: [{
                 label: 'نسبة الحضور %',
-                data: {!! json_encode($attendanceChart['data']) !!},
+                data: @json($attendanceChart['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
                 borderColor: '#1e3a8a',
                 backgroundColor: 'rgba(30, 58, 138, 0.1)',
                 fill: true,
@@ -139,9 +140,9 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(document.getElementById('stageChart'), {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode($stageChart['labels']) !!},
+            labels: @json($stageChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
             datasets: [{
-                data: {!! json_encode($stageChart['data']) !!},
+                data: @json($stageChart['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
                 backgroundColor: ['#1e3a8a', '#d97706', '#10b981', '#8b5cf6']
             }]
         },
@@ -152,10 +153,10 @@ document.addEventListener("DOMContentLoaded", function() {
     new Chart(document.getElementById('classPerformanceChart'), {
         type: 'bar',
         data: {
-            labels: {!! json_encode($classPerformance['labels']) !!},
+            labels: @json($classPerformance['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
             datasets: [{
                 label: 'متوسط الأداء %',
-                data: {!! json_encode($classPerformance['data']) !!},
+                data: @json($classPerformance['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
                 backgroundColor: '#d97706',
                 borderRadius: 8
             }]

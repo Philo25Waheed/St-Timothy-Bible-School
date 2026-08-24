@@ -109,10 +109,14 @@ class DashboardController extends Controller
     private function servantDashboard()
     {
         $user = Auth::user();
-        $assignedClasses = SchoolClass::where('servant_id', $user->id)->with('grade.stage')->get();
-        $classIds = $assignedClasses->pluck('id');
+        $classIds = $user->servant_class_ids;
+        $assignedClasses = SchoolClass::whereIn('id', $classIds)->with('grade.stage')->get();
 
-        $studentsCount = StudentProfile::whereIn('class_id', $classIds)->count();
+        $studentsCount = StudentProfile::where(function($q) use ($classIds, $user) {
+            $q->whereIn('class_id', $classIds)
+              ->orWhere('servant_id', $user->id);
+        })->count();
+
         $todayAttendance = AttendanceRecord::whereIn('class_id', $classIds)
             ->whereDate('date', Carbon::today())
             ->get();
@@ -121,12 +125,27 @@ class DashboardController extends Controller
         $todayTotal = $todayAttendance->count();
         $todayAttendanceRate = $todayTotal > 0 ? round(($todayPresent / $todayTotal) * 100) : 100;
 
-        $classStudents = StudentProfile::whereIn('class_id', $classIds)
-            ->with(['user', 'schoolClass', 'points', 'achievements'])
-            ->get();
+        $classStudents = StudentProfile::where(function($q) use ($classIds, $user) {
+            $q->whereIn('class_id', $classIds)
+              ->orWhere('servant_id', $user->id);
+        })
+        ->with(['user', 'schoolClass', 'points', 'achievements'])
+        ->get();
 
-        $upcomingQuizzes = Quiz::where('created_by', $user->id)->with('lesson')->latest()->take(5)->get();
-        $upcomingEvents = Event::latest()->take(5)->get();
+        $upcomingQuizzes = Quiz::where('created_by', $user->id)
+            ->orWhere(function($q) use ($classIds) {
+                if (!empty($classIds)) {
+                    $q->whereIn('class_id', $classIds);
+                }
+            })
+            ->with('lesson')->latest()->take(5)->get();
+
+        $upcomingEvents = Event::where(function($q) use ($classIds) {
+            $q->whereNull('class_id');
+            if (!empty($classIds)) {
+                $q->orWhereIn('class_id', $classIds);
+            }
+        })->latest()->take(5)->get();
 
         return view('dashboards.servant', compact(
             'assignedClasses', 'studentsCount', 'todayAttendanceRate',

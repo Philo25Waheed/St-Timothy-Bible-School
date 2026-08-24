@@ -676,5 +676,41 @@ class DatabaseSeeder extends Seeder
             'type' => 'attendance',
             'is_read' => false,
         ]);
+
+        // 15. Pending Registration Accounts (For Admin Approval Testing)
+        User::create([
+            'name' => 'كيرلس عاطف غالي',
+            'email' => 'pending_student@bibleschool.com',
+            'password' => Hash::make('password'),
+            'role' => 'student',
+            'phone' => '01221112233',
+            'gender' => 'male',
+            'birth_date' => '2014-07-15',
+            'address' => 'مصر الجديدة، القاهرة',
+            'is_active' => false,
+        ]);
+
+        User::create([
+            'name' => 'أ. عاطف غالي إبراهيم',
+            'email' => 'pending_parent@bibleschool.com',
+            'password' => Hash::make('password'),
+            'role' => 'parent',
+            'phone' => '01229998877',
+            'gender' => 'male',
+            'address' => 'مصر الجديدة، القاهرة',
+            'is_active' => false,
+            'pending_children_info' => [
+                [
+                    'name' => 'جون عاطف غالي',
+                    'gender' => 'male',
+                    'birth_date' => '2016-04-10',
+                ],
+                [
+                    'name' => 'ساندرا عاطف غالي',
+                    'gender' => 'female',
+                    'birth_date' => '2018-09-22',
+                ]
+            ],
+        ]);
     }
 }

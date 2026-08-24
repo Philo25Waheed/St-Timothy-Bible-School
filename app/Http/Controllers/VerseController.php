@@ -29,18 +29,32 @@ class VerseController extends Controller
 
     public function updateProgress(Request $request)
     {
+        $user = Auth::user();
+
         $request->validate([
             'student_id' => 'required|exists:students,id',
             'bible_verse_id' => 'required|exists:bible_verses,id',
             'status' => 'required|in:pending,in_review,completed,excellent',
+            'notes' => 'nullable|string|max:500',
         ]);
+
+        $student = StudentProfile::findOrFail($request->student_id);
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->servant_class_ids;
+
+            $isAllowed = in_array($student->class_id, $assignedClassIds) || $student->servant_id === $user->id;
+            if (!$isAllowed) {
+                abort(403, 'غير مصرح لك بتسجيل تسميع لطالب خارج فصول خدمتك.');
+            }
+        }
 
         StudentVerseProgress::updateOrCreate(
             ['student_id' => $request->student_id, 'bible_verse_id' => $request->bible_verse_id],
             [
                 'status' => $request->status,
                 'notes' => $request->notes,
-                'checked_by' => Auth::id(),
+                'checked_by' => $user->id,
             ]
         );
 

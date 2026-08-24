@@ -72,6 +72,25 @@ class User extends Authenticatable
         return $this->belongsToMany(SchoolClass::class, 'class_servant', 'servant_id', 'class_id');
     }
 
+    /**
+     * Get all class IDs assigned to this servant (via pivot, direct servant_id on class, or student servant_id).
+     */
+    public function getServantClassIdsAttribute(): array
+    {
+        $pivot = $this->assignedClasses()->pluck('classes.id')->toArray();
+        $direct = SchoolClass::where('servant_id', $this->id)->pluck('id')->toArray();
+        $fromStudents = StudentProfile::where('servant_id', $this->id)->whereNotNull('class_id')->pluck('class_id')->toArray();
+        return array_values(array_unique(array_merge($pivot, $direct, $fromStudents)));
+    }
+
+    /**
+     * Get all SchoolClass models assigned to this servant.
+     */
+    public function getServantClassesAttribute()
+    {
+        return SchoolClass::whereIn('id', $this->servant_class_ids)->with(['grade.stage', 'servants'])->get();
+    }
+
     public function notifications()
     {
         return $this->hasMany(Notification::class, 'user_id');

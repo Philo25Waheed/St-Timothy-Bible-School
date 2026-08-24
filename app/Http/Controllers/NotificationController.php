@@ -16,9 +16,11 @@ class NotificationController extends Controller
 
     public function markAsRead(Notification $notification)
     {
-        if ($notification->user_id === Auth::id()) {
-            $notification->update(['is_read' => true, 'read_at' => now()]);
+        if ($notification->user_id !== Auth::id()) {
+            abort(403, 'غير مصرح لك بتعديل هذا الإشعار.');
         }
+
+        $notification->update(['is_read' => true, 'read_at' => now()]);
         return back()->with('success', 'تمت القراءة.');
     }
 

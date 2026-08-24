@@ -21,6 +21,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SpiritualJournalController;
+use App\Http\Controllers\AdminUserController;
 
 // Public Landing Page
 Route::get('/', [LandingController::class, 'index'])->name('landing');
@@ -28,9 +29,9 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 // Guest Auth Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 });
 
 // Authenticated Routes
@@ -49,7 +50,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/prayer-requests', [SpiritualJournalController::class, 'storePrayer'])->name('prayers.store');
 
     // Parent Digest
-    Route::get('/parent/weekly-digest', [ParentController::class, 'weeklyDigest'])->name('parent.weekly_digest');
+    Route::get('/parent/weekly-digest', [ParentController::class, 'weeklyDigest'])
+        ->middleware('role:parent,admin')
+        ->name('parent.weekly_digest');
 
     // Events RSVP & Gallery
     Route::get('/events/gallery', [EventController::class, 'gallery'])->name('events.gallery');
@@ -131,6 +134,7 @@ Route::middleware('auth')->group(function () {
 
     // Admin Only Routes
     Route::middleware('role:admin')->group(function () {
+        Route::resource('admins', AdminUserController::class);
         Route::resource('students', StudentController::class);
         Route::resource('servants', ServantController::class);
         Route::resource('parents', ParentController::class);

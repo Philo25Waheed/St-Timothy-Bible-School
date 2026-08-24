@@ -37,15 +37,23 @@
 
             <!-- Lesson Content HTML -->
             <div class="lesson-html-content" style="font-size: 16px; line-height: 1.9; color: var(--text-main); margin-bottom: 30px;">
-                {!! $lesson->content !!}
+                {!! strip_tags($lesson->content, '<p><br><b><strong><i><em><u><h2><h3><h4><h5><ul><ol><li><blockquote><span><div>') !!}
             </div>
 
             <!-- Video Embed Section if available -->
             @if($lesson->video_url)
+                @php
+                    $videoUrl = $lesson->video_url;
+                    if (str_contains($videoUrl, 'youtube.com/watch?v=')) {
+                        $videoUrl = preg_replace('/.*v=([a-zA-Z0-9_-]+).*/', 'https://www.youtube-nocookie.com/embed/$1', $videoUrl);
+                    } elseif (str_contains($videoUrl, 'youtu.be/')) {
+                        $videoUrl = preg_replace('/.*youtu\.be\/([a-zA-Z0-9_-]+).*/', 'https://www.youtube-nocookie.com/embed/$1', $videoUrl);
+                    }
+                @endphp
                 <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 24px;">
                     <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 16px;"><i class="fas fa-video" style="color: var(--danger);"></i> الفيديو الشارح للدرس</h3>
                     <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: var(--radius-md);">
-                        <iframe src="{{ $lesson->video_url }}" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
+                        <iframe src="{{ $videoUrl }}" style="position: absolute; top:0; left:0; width:100%; height:100%; border:0;" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
                     </div>
                 </div>
             @endif

@@ -26,3 +26,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 env_production_mysql.txt 
+*.sql
+New Text Document.txt

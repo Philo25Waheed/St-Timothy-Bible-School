@@ -85,7 +85,7 @@
 
         <!-- Role Selection -->
         <label class="form-label" style="font-size: 15px; font-weight: 800;">اختر نوع الحساب (الصفة)</label>
-        <div class="grid grid-cols-4" style="margin-bottom: 24px;">
+        <div class="grid grid-cols-2" style="margin-bottom: 24px;">
             <div class="role-option-card active" onclick="selectRole('student')" id="role-card-student">
                 <i class="fas fa-graduation-cap" style="color: var(--accent);"></i>
                 <div style="font-weight: 800; font-size: 14px;">طالب</div>
@@ -93,14 +93,6 @@
             <div class="role-option-card" onclick="selectRole('parent')" id="role-card-parent">
                 <i class="fas fa-users-between-lines" style="color: var(--primary);"></i>
                 <div style="font-weight: 800; font-size: 14px;">ولي أمر</div>
-            </div>
-            <div class="role-option-card" onclick="selectRole('servant')" id="role-card-servant">
-                <i class="fas fa-church" style="color: var(--success);"></i>
-                <div style="font-weight: 800; font-size: 14px;">خادم</div>
-            </div>
-            <div class="role-option-card" onclick="selectRole('admin')" id="role-card-admin">
-                <i class="fas fa-user-shield" style="color: #8b5cf6;"></i>
-                <div style="font-weight: 800; font-size: 14px;">مسؤول (إدارة)</div>
             </div>
         </div>
         <input type="hidden" name="role" id="selectedRole" value="student">

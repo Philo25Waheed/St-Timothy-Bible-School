@@ -36,8 +36,8 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => ['required', 'confirmed', Password::min(6)],
-            'role' => 'required|in:admin,servant,student,parent',
+            'password' => ['required', 'confirmed', Password::min(8)],
+            'role' => 'required|in:student,parent',
             'gender' => 'required|in:male,female',
             'phone' => 'required|string|max:20',
             'birth_date' => 'required|date',
@@ -48,6 +48,8 @@ class AuthController extends Controller
             'email.unique' => 'هذا البريد الإلكتروني مسجل بالفعل.',
             'password.required' => 'كلمة المرور مطلوبة.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
+            'password.min' => 'كلمة المرور يجب أن لا تقل عن 8 أحرف.',
+            'role.in' => 'غير مصرح بالتسجيل الذاتي لهذه الرتبة. يرجى مراجعة إدارة المدرسة.',
             'gender.required' => 'يرجى تحديد النوع.',
             'phone.required' => 'رقم الهاتف مطلوب.',
             'birth_date.required' => 'تاريخ الميلاد مطلوب.',
@@ -166,12 +168,12 @@ class AuthController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'password' => ['required', 'confirmed', Password::min(6)],
+            'password' => ['required', 'confirmed', Password::min(8)],
         ], [
             'current_password.required' => 'كلمة المرور الحالية مطلوبة.',
             'password.required' => 'كلمة المرور الجديدة مطلوبة.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
-            'password.min' => 'كلمة المرور يجب أن لا تقل عن 6 أحرف.',
+            'password.min' => 'كلمة المرور يجب أن لا تقل عن 8 أحرف.',
         ]);
 
         $user = Auth::user();

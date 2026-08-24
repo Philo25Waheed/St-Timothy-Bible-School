@@ -28,6 +28,19 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        RateLimiter::for('login', function (Request $request) {
+            $email = (string) $request->input('email');
+            return Limit::perMinute(10)->by($email . '|' . $request->ip())->response(function () {
+                return back()->withErrors(['email' => 'تم تجاوز الحد المسموح لمحاولات تسجيل الدخول. يرجى الانتظار لمدة دقيقة والمحاولة مجدداً.']);
+            });
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip())->response(function () {
+                return back()->withErrors(['email' => 'تم تجاوز الحد المسموح لمحاولات إنشاء الحساب. يرجى الانتظار قليلاً.']);
+            });
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

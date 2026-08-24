@@ -33,7 +33,7 @@ class ExamController extends Controller
                 });
             }
         } elseif ($user->isServant()) {
-            $classIds = $user->assignedClasses->pluck('id');
+            $classIds = $user->servant_class_ids;
             $query->where(function($q) use ($user, $classIds) {
                 $q->whereIn('class_id', $classIds)
                   ->orWhere('created_by', $user->id);
@@ -49,20 +49,35 @@ class ExamController extends Controller
         $user = Auth::user();
         $stages = Stage::with('grades')->get();
         $curricula = Curriculum::all();
-        $classes = $user->isServant() ? $user->assignedClasses : SchoolClass::all();
+        $classes = $user->isServant() ? $user->servant_classes : SchoolClass::all();
 
         return view('exams.create', compact('stages', 'curricula', 'classes'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $user = Auth::user();
+        $rules = [
             'title' => 'required|string|max:255',
-            'class_id' => 'nullable|exists:classes,id',
             'stage_id' => 'nullable|exists:stages,id',
             'grade_id' => 'nullable|exists:grades,id',
-            'duration_minutes' => 'required|integer|min:5',
-            'passing_score' => 'required|integer|min:10',
+            'duration_minutes' => 'required|integer|min:5|max:180',
+            'passing_score' => 'required|integer|min:10|max:100',
+        ];
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->servant_class_ids;
+            if (empty($assignedClassIds)) {
+                return back()->with('error', 'ليس لديك فصول مسندة لإنشاء امتحان لها.');
+            }
+            $rules['class_id'] = 'required|in:' . implode(',', $assignedClassIds);
+        } else {
+            $rules['class_id'] = 'nullable|exists:classes,id';
+        }
+
+        $request->validate($rules, [
+            'class_id.required' => 'يرجى تحديد الفصل الدراسي الخاص بك.',
+            'class_id.in' => 'غير مصرح لك بإنشاء امتحان لفصل غير مسند لخدمتك.',
         ]);
 
         $exam = Exam::create([
@@ -85,12 +100,15 @@ class ExamController extends Controller
 
     public function edit(Exam $exam)
     {
+        $this->authorizeExamManagement($exam);
         $exam->load('questions');
         return view('exams.builder', compact('exam'));
     }
 
     public function storeQuestion(Request $request, Exam $exam)
     {
+        $this->authorizeExamManagement($exam);
+
         $request->validate([
             'question_text' => 'required|string',
             'question_type' => 'required|in:multiple_choice,true_false,short_answer',
@@ -128,6 +146,18 @@ class ExamController extends Controller
         }
 
         $student = StudentProfile::where('user_id', $user->id)->firstOrFail();
+
+        // Ensure student can only take exam assigned to their class/grade/stage (or general)
+        if ($exam->class_id && $exam->class_id !== $student->class_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لفصل دراسي آخر.');
+        }
+        if ($exam->grade_id && $exam->grade_id !== $student->grade_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لصف دراسي آخر.');
+        }
+        if ($exam->stage_id && $exam->stage_id !== $student->stage_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لمرحلة دراسية أخرى.');
+        }
+
         $previousAttempt = ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->first();
 
         return view('exams.take', compact('exam', 'previousAttempt'));
@@ -137,6 +167,18 @@ class ExamController extends Controller
     {
         $user = Auth::user();
         $student = StudentProfile::where('user_id', $user->id)->firstOrFail();
+
+        // Enforce student access scope on submit
+        if ($exam->class_id && $exam->class_id !== $student->class_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لفصل دراسي آخر.');
+        }
+        if ($exam->grade_id && $exam->grade_id !== $student->grade_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لصف دراسي آخر.');
+        }
+        if ($exam->stage_id && $exam->stage_id !== $student->stage_id) {
+            return redirect()->route('dashboard')->with('error', 'هذا الامتحان مخصص لمرحلة دراسية أخرى.');
+        }
+
         $exam->load('questions');
 
         $userAnswers = $request->input('answers', []);
@@ -190,7 +232,50 @@ class ExamController extends Controller
 
     public function result(ExamAttempt $attempt)
     {
-        $attempt->load(['exam.questions', 'student.user']);
+        $attempt->load(['exam.questions', 'student.user', 'student.schoolClass']);
+        $user = Auth::user();
+
+        // Strict Authorization: Student, Parent of student, Servant of student's class / exam creator, or Admin
+        $isAuthorized = false;
+
+        if ($user->isAdmin()) {
+            $isAuthorized = true;
+        } elseif ($user->isStudent() && $attempt->student && $attempt->student->user_id === $user->id) {
+            $isAuthorized = true;
+        } elseif ($user->isParent() && $attempt->student && $attempt->student->parent_id === $user->id) {
+            $isAuthorized = true;
+        } elseif ($user->isServant()) {
+            $servantClassIds = $user->servant_class_ids;
+            if ($attempt->student && (
+                $attempt->student->servant_id === $user->id ||
+                in_array($attempt->student->class_id, $servantClassIds) ||
+                $attempt->exam->created_by === $user->id
+            )) {
+                $isAuthorized = true;
+            }
+        }
+
+        if (!$isAuthorized) {
+            abort(403, 'غير مصرح لك بالاطلاع على نتيجة هذا الامتحان.');
+        }
+
         return view('exams.result', compact('attempt'));
+    }
+
+    private function authorizeExamManagement(Exam $exam): void
+    {
+        $user = Auth::user();
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        if ($user->isServant()) {
+            $assignedClassIds = $user->servant_class_ids;
+            if ($exam->created_by === $user->id || ($exam->class_id && in_array($exam->class_id, $assignedClassIds))) {
+                return;
+            }
+        }
+
+        abort(403, 'غير مصرح لك بإدارة هذا الامتحان.');
     }
 }

@@ -102,10 +102,7 @@ class SpiritualJournalController extends Controller
                 ->latest()
                 ->get();
         } else {
-            $classIds = $user->assignedClasses()->pluck('classes.id')->toArray();
-            if (empty($classIds)) {
-                $classIds = \App\Models\SchoolClass::where('servant_id', $user->id)->pluck('id')->toArray();
-            }
+            $classIds = $user->servant_class_ids;
 
             $prayers = PrayerRequest::whereHas('student', function ($q) use ($classIds) {
                 $q->whereIn('class_id', $classIds);
@@ -124,15 +121,32 @@ class SpiritualJournalController extends Controller
      */
     public function updatePrayer(Request $request, PrayerRequest $prayerRequest)
     {
+        $user = Auth::user();
+        $prayerRequest->load('student');
+
+        if (!$user->isAdmin()) {
+            $allowedClassIds = $user->servant_class_ids;
+
+            $isAssigned = $prayerRequest->student && (
+                in_array($prayerRequest->student->class_id, $allowedClassIds) ||
+                $prayerRequest->student->servant_id === $user->id ||
+                $prayerRequest->servant_id === $user->id
+            );
+
+            if (!$isAssigned) {
+                abort(403, 'غير مصرح لك بالرد على طلبة صلاة لطالب خارج فصول خدمتك.');
+            }
+        }
+
         $request->validate([
             'status' => 'required|in:pending,praying,answered',
-            'servant_notes' => 'nullable|string',
+            'servant_notes' => 'nullable|string|max:1000',
         ]);
 
         $prayerRequest->update([
             'status' => $request->status,
             'servant_notes' => $request->servant_notes,
-            'servant_id' => Auth::id(),
+            'servant_id' => $user->id,
         ]);
 
         return back()->with('success', 'تم تحديث حالة طلبة الصلاة والرد عليها بنجاح 🙏');

@@ -28,7 +28,7 @@ class CurriculumController extends Controller
                 $query->where('stage_id', $student->stage_id);
             }
         } elseif ($user && $user->isServant()) {
-            $assignedGradeIds = $user->assignedClasses->pluck('grade_id')->filter()->unique()->toArray();
+            $assignedGradeIds = $user->servant_classes->pluck('grade_id')->filter()->unique()->toArray();
             if (!empty($assignedGradeIds)) {
                 $query->where(function($q) use ($assignedGradeIds) {
                     $q->whereIn('grade_id', $assignedGradeIds)
@@ -97,14 +97,33 @@ class CurriculumController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'bible_verse' => 'nullable|string|max:255',
-            'memory_verse' => 'nullable|string',
+            'memory_verse' => 'nullable|string|max:500',
             'content' => 'nullable|string',
+            'video_url' => 'nullable|url|regex:/^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\/.+/i',
+        ], [
+            'video_url.regex' => 'رابط الفيديو يجب أن يكون رابطاً آمناً (HTTPS) من منصة موثوقة (YouTube / Vimeo).',
         ]);
 
-        $unit->lessons()->create($request->only(
-            'title', 'description', 'content', 'bible_verse',
-            'memory_verse', 'video_url', 'order', 'status'
-        ));
+        // Sanitize content: completely strip <script> tags and blocks, allow only safe formatting tags, strip harmful event handlers
+        $rawContent = $request->content;
+        $cleanContent = null;
+        if ($rawContent) {
+            $cleanContent = preg_replace('#<script(.*?)>(.*?)</script>#is', '', $rawContent);
+            $cleanContent = strip_tags($cleanContent, '<p><br><b><strong><i><em><u><h2><h3><h4><h5><ul><ol><li><blockquote><span><div>');
+            $cleanContent = preg_replace('/\s*on\w+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $cleanContent);
+            $cleanContent = preg_replace('/(javascript:|data:)/i', '', $cleanContent);
+        }
+
+        $unit->lessons()->create([
+            'title' => $request->title,
+            'description' => $request->description,
+            'content' => $cleanContent,
+            'bible_verse' => $request->bible_verse,
+            'memory_verse' => $request->memory_verse,
+            'video_url' => $request->video_url,
+            'order' => $request->order ?? 1,
+            'status' => $request->status ?? 'published',
+        ]);
 
         return back()->with('success', 'تم نشر الدرس بنجاح للطلاب.');
     }
@@ -153,7 +172,7 @@ class CurriculumController extends Controller
         }
 
         if ($user->isServant()) {
-            $assignedGradeIds = $user->assignedClasses->pluck('grade_id')->filter()->unique()->toArray();
+            $assignedGradeIds = $user->servant_classes->pluck('grade_id')->filter()->unique()->toArray();
             if ($curriculum->grade_id && in_array($curriculum->grade_id, $assignedGradeIds)) {
                 return true;
             }

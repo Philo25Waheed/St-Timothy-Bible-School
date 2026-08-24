@@ -59,6 +59,10 @@
                             <span class="badge badge-warning" style="margin-right: auto;">{{ $pendingCount }}</span>
                         @endif
                     </a>
+                    <a href="{{ route('admins.index') }}" class="sidebar-item {{ request()->routeIs('admins.*') ? 'active' : '' }}">
+                        <i class="fas fa-user-shield" style="color: #6366f1;"></i>
+                        <span>إدارة مسئولي النظام</span>
+                    </a>
                     <a href="{{ route('students.index') }}" class="sidebar-item {{ request()->routeIs('students.*') ? 'active' : '' }}">
                         <i class="fas fa-user-graduate"></i>
                         <span>إدارة الطلاب</span>

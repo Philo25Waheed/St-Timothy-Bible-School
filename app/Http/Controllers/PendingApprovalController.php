@@ -47,12 +47,13 @@ class PendingApprovalController extends Controller
         if ($user->isParent() && !empty($user->pending_children_info)) {
             foreach ($user->pending_children_info as $childInfo) {
                 if (!empty($childInfo['name'])) {
-                    // Create child student user
+                    // Create child student user with secure random temporary password
+                    $tempPassword = \Illuminate\Support\Str::random(12);
                     $childEmail = 'student_' . rand(1000, 9999) . '@bibleschool.com';
                     $childUser = User::create([
                         'name' => $childInfo['name'],
                         'email' => $childEmail,
-                        'password' => bcrypt('password'),
+                        'password' => bcrypt($tempPassword),
                         'role' => 'student',
                         'is_active' => true,
                     ]);
